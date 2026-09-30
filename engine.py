@@ -1,0 +1,252 @@
+from __future__ import annotations
+import json, sqlite3
+from pathlib import Path
+import pandas as pd
+import numpy as np
+
+FILTER_COLUMNS = ["producto", "marca", "cadena", "edad_rango", "area_nielsen", "nse", "sexo"]
+MD_LABELS = {
+    "md_necesidad": "Resolver necesidad principal",
+    "md_tipo_producto": "Tipo de producto buscado",
+    "md_tono": "Tono/color deseado",
+    "md_marca_conocida": "Marca conocida / de confianza",
+    "md_precio": "Precio adecuado",
+    "md_promocion": "Promoción",
+    "md_cobertura_duracion": "Cobertura y duración del color",
+    "md_menor_dano": "Menor daño / sin amoníaco",
+    "md_hidratacion": "Hidratación / tratamiento",
+    "md_facilidad": "Facilidad de aplicación",
+    "md_confianza_marca": "Confianza en la marca",
+}
+
+BASE_RULES = [
+    (200, "ROBUSTA"),
+    (100, "ESTABLE"),
+    (60, "DIRECCIONAL"),
+    (30, "EXPLORATORIA"),
+    (0, "NO REPORTAR %"),
+]
+
+class InvalidDatabase(Exception):
+    pass
+
+
+def load_database_connection(con: sqlite3.Connection) -> tuple[pd.DataFrame, dict]:
+    """Load and validate the analytical contract from an already-open SQLite connection."""
+    tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "respondents" not in tables or "metadata" not in tables:
+        raise InvalidDatabase("La base no cumple el contrato del simulador: faltan respondents/metadata.")
+    df = pd.read_sql_query("SELECT * FROM respondents", con)
+    meta_df = pd.read_sql_query("SELECT key, value FROM metadata", con)
+    meta = {}
+    for _, row in meta_df.iterrows():
+        v = row["value"]
+        try:
+            meta[row["key"]] = json.loads(v)
+        except Exception:
+            meta[row["key"]] = v
+    validate_dataframe(df)
+    return df, meta
+
+
+def load_database_bytes(file_bytes: bytes) -> tuple[pd.DataFrame, dict]:
+    """Backward-compatible loader for local tests; uses SQLite deserialize and never writes plaintext to disk."""
+    if not file_bytes:
+        raise InvalidDatabase("El archivo está vacío.")
+    con = sqlite3.connect(":memory:")
+    try:
+        if not hasattr(con, "deserialize"):
+            raise InvalidDatabase("Este runtime no soporta SQLite deserialize en memoria.")
+        con.deserialize(file_bytes)
+        return load_database_connection(con)
+    finally:
+        con.close()
+
+
+def load_database_path(path: str | Path) -> tuple[pd.DataFrame, dict]:
+    p = Path(path)
+    return load_database_bytes(p.read_bytes())
+
+def validate_dataframe(df: pd.DataFrame) -> None:
+    required = {
+        "respondent_id", "producto", "marca", "cadena", "edad_rango", "area_nielsen", "nse", "sexo",
+        "decision_1", "decision_2", "decision_3", "decision_validacion",
+        "anaquel_1", "anaquel_2", "sust_marca", "sust_tono", "sust_promocion",
+        "facilidad_encontrar", "barrera_principal",
+    } | set(MD_LABELS)
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise InvalidDatabase("Faltan variables requeridas: " + ", ".join(missing))
+    if df.empty:
+        raise InvalidDatabase("La base no contiene casos.")
+
+
+def base_quality(n: int) -> tuple[str, str]:
+    for min_n, label in BASE_RULES:
+        if n >= min_n:
+            if label == "ROBUSTA": return label, "Lectura apta para comparaciones principales."
+            if label == "ESTABLE": return label, "Lectura general estable; comparar con cautela."
+            if label == "DIRECCIONAL": return label, "Usar como señal o tendencia."
+            if label == "EXPLORATORIA": return label, "Contexto exploratorio; no usar como decisión aislada."
+            return label, "Base insuficiente para presentar porcentajes individuales."
+    return "NO REPORTAR %", "Base insuficiente."
+
+
+def apply_filters(df: pd.DataFrame, filters: dict[str, list[str] | str | None]) -> pd.DataFrame:
+    out = df
+    for col, selected in filters.items():
+        if col not in out.columns or selected in (None, "Todos", ["Todos"], []):
+            continue
+        vals = selected if isinstance(selected, list) else [selected]
+        if "Todos" in vals:
+            continue
+        out = out[out[col].isin(vals)]
+    return out.copy()
+
+
+def options_for(df: pd.DataFrame, col: str) -> list[str]:
+    if col not in df.columns: return []
+    return sorted([str(x) for x in df[col].dropna().unique()], key=lambda x: x.lower())
+
+
+def pct_table(s: pd.Series, label_name="Respuesta") -> pd.DataFrame:
+    x=s.dropna()
+    if len(x)==0:
+        return pd.DataFrame(columns=[label_name,"n","pct"])
+    counts=x.value_counts(dropna=True)
+    return pd.DataFrame({label_name:counts.index.astype(str),"n":counts.values,"pct":counts.values/len(x)*100})
+
+
+def decision_stage_summary(df: pd.DataFrame) -> pd.DataFrame:
+    frames=[]
+    for stage,col in [("Primero","decision_1"),("Después","decision_2"),("Cierre","decision_3")]:
+        t=pct_table(df[col],"criterio")
+        t.insert(0,"etapa",stage); frames.append(t)
+    return pd.concat(frames,ignore_index=True) if frames else pd.DataFrame()
+
+
+def top_routes(df: pd.DataFrame, top_n=10) -> pd.DataFrame:
+    tmp=df[["decision_1","decision_2","decision_3"]].dropna()
+    if tmp.empty: return pd.DataFrame(columns=["ruta","n","pct"])
+    g=(tmp.groupby(["decision_1","decision_2","decision_3"],dropna=False).size().reset_index(name="n").sort_values("n",ascending=False))
+    g["pct"]=g["n"]/len(tmp)*100
+    g["ruta"]=g["decision_1"].astype(str)+" → "+g["decision_2"].astype(str)+" → "+g["decision_3"].astype(str)
+    return g[["ruta","n","pct"]].head(top_n).reset_index(drop=True)
+
+
+def tree_links(df: pd.DataFrame, first_choice: str | None=None, top_d2=6, top_d3=4) -> dict:
+    """Return compact Sankey-ready nodes/links. If first_choice is set, condition on D1."""
+    d=df[["decision_1","decision_2","decision_3"]].dropna()
+    if first_choice and first_choice != "Todos":
+        d=d[d["decision_1"]==first_choice]
+    if d.empty: return {"labels":[],"source":[],"target":[],"value":[],"custom":[]}
+
+    labels=["Compra"]
+    source=[]; target=[]; value=[]; custom=[]
+    node_idx={"ROOT":0}
+
+    if first_choice and first_choice != "Todos":
+        d1_values=[first_choice]
+    else:
+        d1_values=d["decision_1"].value_counts().head(5).index.tolist()
+        d=d[d["decision_1"].isin(d1_values)]
+
+    for d1 in d1_values:
+        key1=f"D1|{d1}"; node_idx[key1]=len(labels); labels.append(f"1º {d1}")
+        n1=int((d["decision_1"]==d1).sum())
+        source.append(0); target.append(node_idx[key1]); value.append(n1); custom.append(f"n={n1}")
+        subset1=d[d["decision_1"]==d1]
+        d2vals=subset1["decision_2"].value_counts().head(top_d2).index.tolist()
+        for d2 in d2vals:
+            key2=f"D2|{d1}|{d2}"; node_idx[key2]=len(labels); labels.append(f"2º {d2}")
+            subset2=subset1[subset1["decision_2"]==d2]
+            n2=len(subset2)
+            source.append(node_idx[key1]); target.append(node_idx[key2]); value.append(n2); custom.append(f"n={n2} | {n2/max(n1,1)*100:.1f}% dentro de {d1}")
+            d3vals=subset2["decision_3"].value_counts().head(top_d3).index.tolist()
+            for d3 in d3vals:
+                key3=f"D3|{d1}|{d2}|{d3}"; node_idx[key3]=len(labels); labels.append(f"3º {d3}")
+                n3=int((subset2["decision_3"]==d3).sum())
+                source.append(node_idx[key2]); target.append(node_idx[key3]); value.append(n3); custom.append(f"n={n3} | {n3/max(n2,1)*100:.1f}% dentro de la rama")
+    return {"labels":labels,"source":source,"target":target,"value":value,"custom":custom}
+
+
+def maxdiff_summary(df: pd.DataFrame) -> pd.DataFrame:
+    rows=[]
+    for col,label in MD_LABELS.items():
+        s=pd.to_numeric(df[col],errors="coerce")
+        rows.append({"driver":label,"score":float(s.mean()) if s.notna().any() else np.nan,"n":int(s.notna().sum())})
+    return pd.DataFrame(rows).sort_values("score",ascending=False).reset_index(drop=True)
+
+
+def maxdiff_compare(filtered: pd.DataFrame, total: pd.DataFrame) -> pd.DataFrame:
+    a=maxdiff_summary(filtered).rename(columns={"score":"segmento","n":"n_segmento"})
+    b=maxdiff_summary(total).rename(columns={"score":"total","n":"n_total"})
+    m=a.merge(b,on="driver",how="outer")
+    m["delta"]=m["segmento"]-m["total"]
+    return m.sort_values("segmento",ascending=False).reset_index(drop=True)
+
+
+def substitution_summary(df: pd.DataFrame, scenario: str) -> pd.DataFrame:
+    col={"Marca no disponible":"sust_marca","Tono/color no disponible":"sust_tono","Sin promoción":"sust_promocion"}[scenario]
+    return pct_table(df[col],"respuesta")
+
+
+def substitution_kpis(df: pd.DataFrame) -> dict:
+    n=max(len(df),1)
+    def share(col, codes):
+        s=pd.to_numeric(df[col],errors="coerce")
+        return float(s.isin(codes).sum()/s.notna().sum()*100) if s.notna().sum() else np.nan
+    return {
+        "cambia_marca_si_falta_marca": share("sust_marca_code", [1,2,3,4]),
+        "cambia_marca_para_conservar_tono": share("sust_tono_code", [2]),
+        "compra_sin_promocion": share("sust_promocion_code", [1]),
+    }
+
+
+def scenario_counts(df: pd.DataFrame, scenario: str, simulated_n: int=100) -> pd.DataFrame:
+    t=substitution_summary(df,scenario).copy()
+    if t.empty: return t
+    t["esperados"]=np.rint(t["pct"]*simulated_n/100).astype(int)
+    # adjust rounding to exactly N
+    diff=simulated_n-int(t["esperados"].sum())
+    if diff and len(t):
+        order=(t["pct"]*simulated_n/100 - np.floor(t["pct"]*simulated_n/100)).sort_values(ascending=False).index.tolist()
+        step=1 if diff>0 else -1
+        for idx in order[:abs(diff)]: t.loc[idx,"esperados"] += step
+    return t
+
+
+def shelf_priority(df: pd.DataFrame) -> pd.DataFrame:
+    opts=sorted(set(df["anaquel_1"].dropna()).union(set(df["anaquel_2"].dropna())))
+    rows=[]; n=max(len(df),1)
+    for o in opts:
+        p1=(df["anaquel_1"]==o).mean()*100
+        p2=(df["anaquel_2"]==o).mean()*100
+        idx=(2*p1+p2)/3
+        rows.append({"organizacion":o,"primera_ayuda":p1,"segunda_ayuda":p2,"indice_prioridad":idx})
+    return pd.DataFrame(rows).sort_values("indice_prioridad",ascending=False).reset_index(drop=True)
+
+
+def shelf_pair_score(df: pd.DataFrame, primary: str, secondary: str) -> dict:
+    if len(df)==0: return {"exact_order":np.nan,"top2_any_order":np.nan,"coverage":np.nan}
+    exact=((df["anaquel_1"]==primary)&(df["anaquel_2"]==secondary)).mean()*100
+    unordered=(((df["anaquel_1"]==primary)&(df["anaquel_2"]==secondary))|((df["anaquel_1"]==secondary)&(df["anaquel_2"]==primary))).mean()*100
+    coverage=((df["anaquel_1"].isin([primary,secondary]))|(df["anaquel_2"].isin([primary,secondary]))).mean()*100
+    return {"exact_order":exact,"top2_any_order":unordered,"coverage":coverage}
+
+
+def friction_summary(df: pd.DataFrame) -> tuple[float,pd.DataFrame]:
+    easy=df["facilidad_encontrar"].isin(["Fácil","Muy fácil"]).mean()*100 if len(df) else np.nan
+    barriers=pct_table(df["barrera_principal"],"barrera")
+    return easy, barriers
+
+
+def executive_kpis(df: pd.DataFrame) -> dict:
+    d4_yes=(df["decision_validacion"]=="Sí").mean()*100 if len(df) else np.nan
+    md=maxdiff_summary(df)
+    top_driver=md.iloc[0]["driver"] if len(md) else None
+    d1=pct_table(df["decision_1"],"criterio")
+    first=d1.iloc[0]["criterio"] if len(d1) else None
+    k=substitution_kpis(df)
+    easy,_=friction_summary(df)
+    return {"validacion_arbol":d4_yes,"primer_gate":first,"top_driver":top_driver,"facilidad":easy,**k}

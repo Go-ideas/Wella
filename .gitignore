@@ -1,0 +1,25 @@
+# Never commit study/client data
+*.db
+*.sqlite
+*.sqlite3
+*.sav
+*.zsav
+*.xlsx
+*.xls
+*.csv
+*.goideas
+*.key
+*.pem
+*.p12
+*.pfx
+*.zip
+
+# Streamlit secrets and environment
+.streamlit/secrets.toml
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
