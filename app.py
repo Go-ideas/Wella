@@ -531,6 +531,7 @@ def icon_svg(kind: str, stroke: str = "#1D5E9E") -> str:
         "shield": '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3zM9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
         "megaphone": '<path d="M4 13h4l8 4V7l-8 4H4v2zM8 13l1 5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
         "chart": '<path d="M5 18V9h3v9H5zm6 0V5h3v13h-3zm6 0v-6h3v6h-3z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+        "warning": '<path d="M12 4l8 15H4L12 4zM12 9v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
     }
     body = paths.get(kind, paths["chart"])
     return (
@@ -1139,7 +1140,7 @@ def substitution_panel_html(k: dict, insight: str) -> str:
         '<div class="panel-sub">Situaciones que pueden cambiar la elección.</div>'
         f'{html_rows}'
         '<div class="insight-callout" style="background:#FFF3F4;border-color:#F6DDE0;color:#8E3243">'
-        f'{insight}'
+        f'{icon_svg("warning", "#C7435B")} {insight}'
         '</div>'
         '</div>'
     )
