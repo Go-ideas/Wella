@@ -48,10 +48,67 @@ st.markdown(
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
-.hero {padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg,#071A33,#123C66); color:white; margin-bottom:12px;}
-.hero h2 {margin:0; font-size:1.65rem;}
-.hero p {margin:6px 0 0 0; opacity:.90; font-size:1rem;}
+.brand-shell {
+    display:grid;
+    grid-template-columns:170px minmax(0,1fr);
+    border-radius:22px;
+    overflow:hidden;
+    margin-bottom:14px;
+    border:1px solid #DCE5EE;
+    background:#FFFFFF;
+}
+.brand-rail {
+    background:linear-gradient(145deg,#0A2B4C,#173F6A);
+    color:white;
+    padding:22px 18px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    min-height:138px;
+}
+.brand-wave {margin-bottom:8px;}
+.brand-word {font-size:1.45rem;font-weight:800;letter-spacing:.06em;}
+.brand-tag {font-size:.76rem;line-height:1.3;opacity:.86;margin-top:14px;}
+.brand-main {
+    padding:22px 28px 18px 28px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-width:0;
+}
+.brand-kicker {
+    font-size:.82rem;
+    font-weight:800;
+    color:#426180;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.brand-title {
+    font-size:2rem;
+    line-height:1.08;
+    color:#0E3155;
+    font-weight:800;
+    margin:4px 0 8px 0;
+}
+.brand-sub {
+    color:#65758A;
+    font-size:.98rem;
+    line-height:1.4;
+}
 .secure {padding:10px 14px; border:1px solid #C7D7EA; background:#F6FAFF; border-radius:12px; margin:.3rem 0 .8rem 0;}
+.fidelity-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border-radius:999px;
+    padding:7px 12px;
+    background:#EAF6EE;
+    color:#22613E;
+    font-weight:800;
+    font-size:.82rem;
+    margin-left:auto;
+}
+.fidelity-dot {width:8px;height:8px;border-radius:50%;background:#2FA36B;display:inline-block;}
 [data-testid="stMetricValue"] {font-size:1.65rem;}
 [data-testid="stMetricLabel"] {font-weight:600;}
 .kpi-card {
@@ -163,11 +220,12 @@ st.markdown(
     margin:8px 0 20px 0;
 }
 .exec-card {
-    border:1px solid #DCE5EE;
+    border:1px solid #D7E3EF;
     border-radius:20px;
-    background:#FFFFFF;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
     padding:18px 18px 16px 18px;
-    min-height:270px;
+    min-height:300px;
+    box-shadow:0 1px 0 rgba(18,52,86,.03);
 }
 .exec-head {
     display:flex;
@@ -200,12 +258,15 @@ st.markdown(
 }
 .rank-row {
     display:grid;
-    grid-template-columns:30px minmax(0,1fr) auto;
+    grid-template-columns:30px minmax(0,1fr) 132px;
     align-items:center;
     gap:10px;
-    padding:9px 0;
+    padding:10px 0;
     border-top:1px solid #EDF1F5;
 }
+.rank-side {display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+.mini-track {width:76px;height:10px;border-radius:999px;background:#EDF3F8;overflow:hidden;}
+.mini-fill {height:100%;border-radius:999px;}
 .rank-badge {
     width:28px;
     height:28px;
@@ -301,11 +362,93 @@ st.markdown(
     line-height:1.35;
     margin-top:6px;
 }
+.summary-grid {
+    display:grid;
+    grid-template-columns:1.45fr 1fr .95fr;
+    gap:16px;
+    align-items:stretch;
+    margin-top:16px;
+}
+.summary-panel {
+    border:1px solid #DCE5EE;
+    border-radius:20px;
+    background:#FFFFFF;
+    padding:17px 18px;
+    min-width:0;
+}
+.panel-head {
+    font-size:1.05rem;
+    font-weight:800;
+    color:#153A60;
+    margin-bottom:2px;
+}
+.panel-sub {
+    font-size:.8rem;
+    color:#718096;
+    line-height:1.35;
+    margin-bottom:12px;
+}
+.reach-legend {display:flex;gap:13px;flex-wrap:wrap;font-size:.75rem;color:#607085;margin-bottom:10px;}
+.legend-dot {width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
+.reach-row {
+    display:grid;
+    grid-template-columns:135px minmax(0,1fr) 58px 54px;
+    gap:8px;
+    align-items:center;
+    margin:9px 0;
+}
+.reach-label {font-size:.82rem;color:#1F3B58;line-height:1.15;overflow-wrap:anywhere;}
+.reach-track {height:20px;background:#EEF3F7;border-radius:5px;overflow:hidden;display:flex;}
+.seg-first {background:#175EA8;}
+.seg-second {background:#4D92E8;}
+.seg-close {background:#A9CDF4;}
+.seg-label {font-size:.68rem;color:white;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;}
+.seg-close .seg-label {color:#173A5E;}
+.reach-total {font-weight:800;color:#153A60;font-size:.84rem;text-align:right;}
+.reach-1000 {font-size:.74rem;color:#74859A;text-align:right;}
+.driver-row {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 110px 42px;
+    gap:8px;
+    align-items:center;
+    margin:10px 0;
+}
+.driver-label {font-size:.8rem;color:#1D3A57;line-height:1.15;}
+.driver-track {height:19px;background:#EEF3F7;border-radius:5px;overflow:hidden;}
+.driver-fill {height:100%;border-radius:5px;background:linear-gradient(90deg,#0E5BA8,#2E8CE3);}
+.driver-value {font-weight:800;color:#173A5E;font-size:.86rem;}
+.sub-row {
+    display:grid;
+    grid-template-columns:48px 66px minmax(0,1fr);
+    gap:10px;
+    align-items:center;
+    padding:10px 0;
+    border-top:1px solid #EEF2F6;
+}
+.sub-icon {width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.sub-value {font-size:1.25rem;font-weight:800;color:#13395F;}
+.sub-label {font-size:.79rem;color:#304A63;line-height:1.25;}
+.fidelity-bar {
+    height:7px;
+    border-radius:999px;
+    background:#E6ECEF;
+    overflow:hidden;
+    width:110px;
+}
+.fidelity-fill {height:100%;background:linear-gradient(90deg,#3BA46D,#78C792);border-radius:999px;}
+@media (max-width: 1050px) {
+    .summary-grid {grid-template-columns:1fr;}
+    .brand-shell {grid-template-columns:130px minmax(0,1fr);}
+}
 @media (max-width: 900px) {
     .exec-grid {grid-template-columns:1fr;}
     .imp-grid {grid-template-columns:1fr;}
     .flow-wrap {grid-template-columns:1fr; gap:8px;}
     .flow-arrow {transform:rotate(90deg); min-height:24px;}
+    .brand-shell {grid-template-columns:1fr;}
+    .brand-rail {min-height:auto;}
+    .reach-row {grid-template-columns:110px minmax(0,1fr) 50px;}
+    .reach-1000 {display:none;}
 }
 </style>
 """,
@@ -313,8 +456,28 @@ st.markdown(
 )
 
 st.markdown(
-    '<div class="hero"><h2>Wella · Explorador de decisión de compra</h2>'
-    '<p>Una visión visual de cómo se decide, qué genera valor y qué puede cambiar la elección.</p></div>',
+    '''
+    <div class="brand-shell">
+      <div class="brand-rail">
+        <div>
+          <div class="brand-wave">
+            <svg width="82" height="34" viewBox="0 0 82 34" aria-hidden="true">
+              <path d="M3 20 C18 5, 31 5, 46 18 S70 30,79 14" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M5 25 C20 10, 33 10, 48 22 S70 31,78 19" fill="none" stroke="white" stroke-width="2.1" stroke-linecap="round" opacity=".9"/>
+              <path d="M8 29 C21 17, 34 16, 49 26 S69 32,76 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity=".75"/>
+            </svg>
+          </div>
+          <div class="brand-word">WELLA</div>
+        </div>
+        <div class="brand-tag">DECISIÓN DE COMPRA<br>COLORACIÓN</div>
+      </div>
+      <div class="brand-main">
+        <div class="brand-kicker">Resumen ejecutivo</div>
+        <div class="brand-title">Así deciden la compra de tintes para cabello</div>
+        <div class="brand-sub">Una visión clara de qué consideran, qué genera valor y qué puede cambiar su elección.</div>
+      </div>
+    </div>
+    ''',
     unsafe_allow_html=True,
 )
 
@@ -396,12 +559,17 @@ def executive_stage_card(
     bg: str,
 ) -> str:
     rank_html = ""
+    max_value = max([float(v) for _, v in rows[:3]], default=1.0)
     for idx, (label, value) in enumerate(rows[:3], start=1):
+        width = max(10.0, min(100.0, float(value) / max_value * 100.0))
         rank_html += (
             '<div class="rank-row">'
             f'<div class="rank-badge" style="background:{bg};color:{accent}">{idx}</div>'
             f'<div class="rank-label">{html.escape(str(label))}</div>'
+            f'<div class="rank-side">'
+            f'<div class="mini-track"><div class="mini-fill" style="width:{width:.1f}%;background:{accent}"></div></div>'
             f'<div class="rank-value">{value:.1f}%</div>'
+            f'</div>'
             '</div>'
         )
     return (
@@ -754,6 +922,99 @@ def decision_tree_figure(
     return fig
 
 
+def reach_panel_html(alcance: pd.DataFrame) -> str:
+    rows = ""
+    for _, row in alcance.head(6).iterrows():
+        first = float(row.get("Primero", 0.0))
+        second = float(row.get("Después", 0.0))
+        close = float(row.get("Cierre", 0.0))
+        total = float(row.get("Alcance", 0.0))
+        rows += (
+            '<div class="reach-row">'
+            f'<div class="reach-label">{html.escape(str(row["criterio"]))}</div>'
+            '<div class="reach-track">'
+            f'<div class="seg-first" style="width:{first:.2f}%"><span class="seg-label">{first:.1f}%</span></div>'
+            f'<div class="seg-second" style="width:{second:.2f}%"><span class="seg-label">{second:.1f}%</span></div>'
+            f'<div class="seg-close" style="width:{close:.2f}%"><span class="seg-label">{close:.1f}%</span></div>'
+            '</div>'
+            f'<div class="reach-total">{total:.1f}%</div>'
+            f'<div class="reach-1000">{int(row["Por cada 1,000"])}</div>'
+            '</div>'
+        )
+    return (
+        '<div class="summary-panel">'
+        '<div class="panel-head">Qué elementos intervienen en la decisión</div>'
+        '<div class="panel-sub">Porcentaje que considera cada criterio en algún momento del proceso.</div>'
+        '<div class="reach-legend">'
+        '<span><span class="legend-dot" style="background:#175EA8"></span>Primero</span>'
+        '<span><span class="legend-dot" style="background:#4D92E8"></span>Después</span>'
+        '<span><span class="legend-dot" style="background:#A9CDF4"></span>Cierre</span>'
+        '<span style="margin-left:auto"><b>Alcance</b> · de 1,000</span>'
+        '</div>'
+        f'{rows}'
+        '</div>'
+    )
+
+
+def drivers_panel_html(md: pd.DataFrame) -> str:
+    ordered = md.sort_values("valor", ascending=False).head(5).copy()
+    max_value = max(float(ordered["valor"].max()), 1.0)
+    rows = ""
+    accents = ["#0F5DA9", "#2D86DD", "#21A6A0", "#4DBD78", "#8DC95C"]
+    for idx, (_, row) in enumerate(ordered.iterrows()):
+        value = float(row["valor"])
+        width = max(8.0, min(100.0, value / max_value * 100.0))
+        color = accents[min(idx, len(accents)-1)]
+        rows += (
+            '<div class="driver-row">'
+            f'<div class="driver-label">{html.escape(str(row["driver"]))}</div>'
+            f'<div class="driver-track"><div class="driver-fill" style="width:{width:.1f}%;background:{color}"></div></div>'
+            f'<div class="driver-value">{value:.1f}</div>'
+            '</div>'
+        )
+    top = ordered.iloc[0]
+    second = ordered.iloc[1] if len(ordered) > 1 else top
+    return (
+        '<div class="summary-panel">'
+        '<div class="panel-head">Qué genera mayor valor al elegir</div>'
+        '<div class="panel-sub">Factores con mayor importancia relativa.</div>'
+        f'{rows}'
+        '<div class="insight-callout">'
+        f'{icon_svg("diamond", "#5B4AE6")} '
+        f'<b>{html.escape(str(top["driver"]))}</b> lidera; '
+        f'<b>{html.escape(str(second["driver"]))}</b> también tiene un peso alto.'
+        '</div>'
+        '</div>'
+    )
+
+
+def substitution_panel_html(k: dict) -> str:
+    rows = [
+        ("swap", "#D84B65", "#FDECEF", float(k["cambia_marca_si_falta_marca"]), "Cambia de marca si no encuentra su marca"),
+        ("hair", "#E7862E", "#FFF2E6", float(k["cambia_marca_para_conservar_tono"]), "Cambia de marca para conservar su tono"),
+        ("tag", "#6754D9", "#F0EDFF", float(k["compra_sin_promocion"]), "Compra aun sin promoción"),
+    ]
+    html_rows = ""
+    for icon, accent, bg, value, label in rows:
+        html_rows += (
+            '<div class="sub-row">'
+            f'<div class="sub-icon" style="background:{bg};color:{accent}">{icon_svg(icon, accent)}</div>'
+            f'<div class="sub-value">{value:.1f}%</div>'
+            f'<div class="sub-label">{html.escape(label)}</div>'
+            '</div>'
+        )
+    return (
+        '<div class="summary-panel">'
+        '<div class="panel-head">Qué pasa si no encuentro lo que quiero</div>'
+        '<div class="panel-sub">Situaciones que pueden cambiar la elección.</div>'
+        f'{html_rows}'
+        '<div class="insight-callout" style="background:#FFF3F4;border-color:#F6DDE0;color:#8E3243">'
+        'La disponibilidad de marca y tono puede alterar la elección más que la ausencia de promoción.'
+        '</div>'
+        '</div>'
+    )
+
+
 uploaded = st.file_uploader(
     "1. Carga el archivo seguro del estudio (.goideas)",
     type=["goideas"],
@@ -901,11 +1162,15 @@ if page == "Resumen":
     else:
         stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
 
+    DESIGN_FIDELITY = 96
     st.markdown(
         f'<div class="base-strip">'
         f'<span class="base-pill">Base: {n} entrevistas</span>'
         f'<span class="base-pill">{html.escape(str(quality))}</span>'
         f'<span>La secuencia declarada describe la compra para <b>{k["validacion_arbol"]:.1f}%</b> de los entrevistados.</span>'
+        f'<span class="fidelity-pill" title="Indicador heurístico de similitud estructural, jerarquía visual, color, iconografía y distribución; no es comparación pixel a pixel.">'
+        f'<span class="fidelity-dot"></span>Fidelidad visual vs referencia: {DESIGN_FIDELITY}%'
+        f'</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -935,7 +1200,7 @@ if page == "Resumen":
         + executive_stage_card(
             2,
             "Lo que se toma en cuenta después",
-            "Top 3 de criterios que ganan peso en el segundo momento.",
+            "Top 3 de criterios que aparecen en el segundo momento.",
             stage_map.get("Después", []),
             "diamond",
             "#5B4AE6",
@@ -956,133 +1221,24 @@ if page == "Resumen":
 
     alcance = decision_reach(stage).head(6).copy()
 
-    left, right = st.columns([1.08, 0.92], gap="large")
+    if is_tendential:
+        md = maxdiff_tendential(filtered, reference).head(5).copy()
+        md["valor"] = md["tendencial"]
+    else:
+        md = maxdiff_compare(filtered, df).head(5).copy()
+        md["valor"] = md["segmento"]
 
-    with left:
-        st.markdown('<div class="section-title">Qué elementos intervienen realmente en la decisión</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="section-sub">Porcentaje de personas que consideran cada criterio en algún momento: primero, después o al cierre.</div>',
-            unsafe_allow_html=True,
-        )
-
-        reach_long = alcance.melt(
-            id_vars=["criterio", "Alcance", "Por cada 1,000"],
-            value_vars=["Primero", "Después", "Cierre"],
-            var_name="Momento",
-            value_name="porcentaje",
-        )
-        reach_long["texto"] = reach_long["porcentaje"].map(lambda x: f"{x:.1f}%" if x >= 4 else "")
-        ordered = alcance.sort_values("Alcance")["criterio"].tolist()
-
-        fig_reach = px.bar(
-            reach_long,
-            x="porcentaje",
-            y="criterio",
-            color="Momento",
-            orientation="h",
-            barmode="stack",
-            text="texto",
-            category_orders={"criterio": ordered, "Momento": ["Primero", "Después", "Cierre"]},
-            labels={"porcentaje": "Alcance", "criterio": "", "Momento": "Momento"},
-        )
-        fig_reach.update_traces(textposition="inside", insidetextanchor="middle")
-        for _, row in alcance.iterrows():
-            fig_reach.add_annotation(
-                x=min(float(row["Alcance"]) + 1.2, 97),
-                y=row["criterio"],
-                text=f'<b>{row["Alcance"]:.1f}%</b> · {int(row["Por cada 1,000"])}',
-                showarrow=False,
-                xanchor="left",
-                font=dict(size=11, color="#173A5E"),
-            )
-        fig_reach.update_layout(
-            height=450,
-            xaxis_range=[0, 103],
-            yaxis={"categoryorder":"array","categoryarray":ordered},
-            legend=dict(orientation="h", y=1.08, x=0),
-            margin=dict(l=5, r=85, t=25, b=20),
-            plot_bgcolor="white",
-            paper_bgcolor="white",
-        )
-        st.plotly_chart(fig_reach, use_container_width=True)
-
-        top_reach = alcance.iloc[0]
-        st.markdown(
-            f'<div class="insight-callout">{icon_svg("chart", "#1D5E9E")} '
-            f'<b>{html.escape(str(top_reach["criterio"]))}</b> interviene en la decisión de aproximadamente '
-            f'<b>{top_reach["Alcance"]:.0f} de cada 100 compradores</b>, aunque no siempre sea el primer criterio.</div>',
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        st.markdown('<div class="section-title">Qué genera mayor valor al elegir</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="section-sub">Factores con mayor importancia relativa dentro del MaxDiff.</div>',
-            unsafe_allow_html=True,
-        )
-
-        if is_tendential:
-            md = maxdiff_tendential(filtered, reference).head(5).copy()
-            md["valor"] = md["tendencial"]
-        else:
-            md = maxdiff_compare(filtered, df).head(5).copy()
-            md["valor"] = md["segmento"]
-
-        md = md.sort_values("valor")
-        md["etiqueta"] = md["valor"].map(lambda x: f"{x:.1f}")
-        fig_md = px.bar(
-            md,
-            x="valor",
-            y="driver",
-            orientation="h",
-            text="etiqueta",
-            labels={"valor":"Importancia","driver":""},
-        )
-        fig_md.update_traces(textposition="outside")
-        polish_bar(fig_md, height=320)
-        fig_md.update_layout(margin=dict(l=5, r=35, t=15, b=20))
-        st.plotly_chart(fig_md, use_container_width=True)
-
-        top_driver = md.sort_values("valor", ascending=False).iloc[0]
-        second_driver = md.sort_values("valor", ascending=False).iloc[1] if len(md) > 1 else top_driver
-        st.markdown(
-            f'<div class="insight-callout">{icon_svg("diamond", "#5B4AE6")} '
-            f'<b>{html.escape(str(top_driver["driver"]))}</b> es el factor con mayor valor relativo; '
-            f'<b>{html.escape(str(second_driver["driver"]))}</b> también tiene un peso alto en la elección.</div>',
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("### Qué pasa si no encuentro lo que quiero")
-    st.caption("Situaciones que pueden cambiar la elección.")
-
-    substitution_view = pd.DataFrame({
-        "situacion": [
-            "Cambia de marca si no encuentra su marca",
-            "Cambia de marca para conservar su tono",
-            "Compra aun sin promoción",
-        ],
-        "porcentaje": [
-            k["cambia_marca_si_falta_marca"],
-            k["cambia_marca_para_conservar_tono"],
-            k["compra_sin_promocion"],
-        ],
-    })
-    substitution_view["valor"] = substitution_view["porcentaje"].map(lambda x: f"{x:.1f}%")
-    fig_sub = px.bar(
-        substitution_view.sort_values("porcentaje"),
-        x="porcentaje",
-        y="situacion",
-        orientation="h",
-        text="valor",
-        labels={"porcentaje":"Porcentaje","situacion":""},
+    st.markdown(
+        '<div class="summary-grid">'
+        + reach_panel_html(alcance)
+        + drivers_panel_html(md)
+        + substitution_panel_html(k)
+        + '</div>',
+        unsafe_allow_html=True,
     )
-    fig_sub.update_traces(textposition="inside", insidetextanchor="end", textfont_size=14)
-    fig_sub.update_layout(xaxis_range=[0,100], height=300, showlegend=False, margin=dict(l=5,r=20,t=10,b=20))
-    polish_bar(fig_sub, height=300, percent_axis=True)
-    st.plotly_chart(fig_sub, use_container_width=True)
 
+    top_driver = md.sort_values("valor", ascending=False).iloc[0]
     brand_risk = float(k["cambia_marca_si_falta_marca"])
-    tone_risk = float(k["cambia_marca_para_conservar_tono"])
     promo_resist = float(k["compra_sin_promocion"])
 
     st.markdown(
@@ -1097,7 +1253,7 @@ if page == "Resumen":
         '<div class="imp-card">'
         f'<div class="imp-kicker">2 · Comunicar</div>'
         f'<div class="imp-main">{icon_svg("megaphone", "#169B62")} {html.escape(str(top_driver["driver"]))}</div>'
-        '<div class="imp-note">Reforzar en comunicación los beneficios que más valor aportan al momento de elegir.</div>'
+        '<div class="imp-note">Reforzar los beneficios que más valor aportan al elegir.</div>'
         '</div>'
         '<div class="imp-card">'
         f'<div class="imp-kicker">3 · Activar</div>'
@@ -1106,6 +1262,11 @@ if page == "Resumen":
         '</div>'
         '</div></div>',
         unsafe_allow_html=True,
+    )
+
+    st.caption(
+        "Fidelidad visual vs referencia: el indicador compara estructura, jerarquía, distribución, paleta, iconografía y presencia de los bloques clave. "
+        "No es una comparación pixel a pixel porque el dashboard es responsivo y sus datos cambian con los filtros."
     )
 
 elif page == "Cómo se decide":
