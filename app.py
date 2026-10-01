@@ -211,7 +211,7 @@ section[data-testid="stSidebar"] > div,
 .small-note {font-size: .82rem; color: #667085;}
 .brand-shell {
     display:grid;
-    grid-template-columns:154px minmax(0,1fr);
+    grid-template-columns:178px minmax(0,1fr);
     border-radius:22px;
     overflow:hidden;
     margin-bottom:14px;
@@ -219,40 +219,40 @@ section[data-testid="stSidebar"] > div,
     background:#FFFFFF;
 }
 .brand-rail {
-    background:linear-gradient(145deg,#0A2B4C,#173F6A);
-    color:white;
-    padding:18px 16px 16px 16px;
+    background:#F2F2F2;
+    color:#173A5E;
+    padding:14px 14px 13px 14px;
     display:flex;
     flex-direction:column;
     justify-content:center;
     align-items:center;
     min-height:132px;
     text-align:center;
+    border-right:1px solid #E1E6EB;
 }
-.brand-logo-lockup {
+.brand-official-logo-frame {
+    width:154px;
+    height:88px;
+    overflow:hidden;
     display:flex;
-    flex-direction:column;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
-    width:100%;
+    margin-bottom:7px;
 }
-.brand-wave {
-    margin:0 0 6px 0;
-    line-height:0;
-}
-.brand-word {
-    font-size:1.28rem;
-    line-height:1;
-    font-weight:800;
-    letter-spacing:.07em;
+.brand-official-logo {
+    width:164px;
+    max-width:none;
+    display:block;
+    transform:translateY(-31px);
 }
 .brand-tag {
     width:100%;
-    font-size:.62rem;
+    font-size:.61rem;
     line-height:1.28;
-    opacity:.78;
-    margin-top:13px;
-    letter-spacing:.025em;
+    color:#37546F;
+    font-weight:700;
+    margin-top:4px;
+    letter-spacing:.035em;
 }
 .brand-main {
     padding:22px 28px 18px 28px;
@@ -862,7 +862,7 @@ section[data-testid="stSidebar"] > div,
 }
 @media (max-width: 1050px) {
     .summary-grid {grid-template-columns:1fr;}
-    .brand-shell {grid-template-columns:124px minmax(0,1fr);}
+    .brand-shell {grid-template-columns:148px minmax(0,1fr);}
 }
 @media (max-width: 900px) {
     .st-key-study_nav [data-testid="stHorizontalBlock"] {gap:.45rem !important;}
@@ -887,15 +887,12 @@ st.markdown(
     '''
     <div class="brand-shell">
       <div class="brand-rail">
-        <div class="brand-logo-lockup">
-          <div class="brand-wave">
-            <svg width="92" height="38" viewBox="0 0 92 38" aria-hidden="true">
-              <path d="M4 21 C20 5, 35 5, 51 19 S78 31,88 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-              <path d="M6 27 C22 11, 37 11, 53 24 S78 32,87 20" fill="none" stroke="white" stroke-width="2.1" stroke-linecap="round" opacity=".90"/>
-              <path d="M10 32 C24 19, 39 18, 54 28 S77 34,84 25" fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" opacity=".72"/>
-            </svg>
-          </div>
-          <div class="brand-word">WELLA</div>
+        <div class="brand-official-logo-frame">
+          <img
+            class="brand-official-logo"
+            src="https://s3-eu-west-1.amazonaws.com/wellamymarketing-public/es/detail/6c9e9c12-192d-4b89-995a-b5326b8f2738.jpg"
+            alt="Wella"
+          />
         </div>
         <div class="brand-tag">DECISIÓN DE COMPRA<br>COLORACIÓN</div>
       </div>
