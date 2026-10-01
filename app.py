@@ -1244,10 +1244,28 @@ def decision_tree_figure(
         strength=12.0,
     )
 
+    requested_first, requested_second, requested_third = (
+        highlight_path if highlight_path else (None, None, None)
+    )
+
+    def _keep_selected(table: pd.DataFrame, selected: str | None, limit: int) -> pd.DataFrame:
+        """Keep top-N but always include the manually selected option when available."""
+        if table.empty or limit <= 0:
+            return table.head(0).copy()
+        shown = table.head(limit).copy()
+        if selected and selected in table["opcion"].astype(str).tolist():
+            if selected not in shown["opcion"].astype(str).tolist():
+                selected_row = table[table["opcion"].astype(str) == str(selected)].head(1)
+                if len(shown) >= limit:
+                    shown = pd.concat([shown.iloc[:-1], selected_row], ignore_index=True)
+                else:
+                    shown = pd.concat([shown, selected_row], ignore_index=True)
+        return shown.reset_index(drop=True)
+
     if first_choice and first_choice != "Todos":
         step1 = step1[step1["opcion"] == first_choice].copy()
     else:
-        step1 = step1.head(top_d1).copy()
+        step1 = _keep_selected(step1, requested_first, top_d1)
 
     branches = []
     for d1_idx, (_, r1) in enumerate(step1.iterrows()):
@@ -1265,7 +1283,8 @@ def decision_tree_figure(
         )
         step2 = step2[step2["opcion"] != d1].copy()
         d2_limit = top_d2 if d1_idx == 0 else max(1, top_d2 - 1)
-        step2 = step2.head(d2_limit).copy()
+        selected_d2_for_branch = requested_second if d1 == requested_first else None
+        step2 = _keep_selected(step2, selected_d2_for_branch, d2_limit)
 
         children2 = []
         for d2_idx, (_, r2) in enumerate(step2.iterrows()):
@@ -1290,7 +1309,12 @@ def decision_tree_figure(
             else:
                 # Simple/Medio: mantener el árbol compacto.
                 d3_limit = top_d3 if d1_idx == 0 and d2_idx == 0 else 1
-            step3 = step3.head(d3_limit).copy()
+            selected_d3_for_branch = (
+                requested_third
+                if d1 == requested_first and d2 == requested_second
+                else None
+            )
+            step3 = _keep_selected(step3, selected_d3_for_branch, d3_limit)
 
             children3 = [
                 {
