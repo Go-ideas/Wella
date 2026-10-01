@@ -205,6 +205,29 @@ section[data-testid="stSidebar"] > div,
     flex-direction:column;
     justify-content:center;
     min-width:0;
+    position:relative;
+}
+.goideas-mark {
+    position:absolute;
+    top:16px;
+    right:20px;
+    text-align:right;
+    color:#173A5E;
+    opacity:.55;
+    line-height:1;
+    pointer-events:none;
+}
+.goideas-mark-main {
+    font-size:.86rem;
+    font-weight:800;
+    letter-spacing:.015em;
+}
+.goideas-mark-sub {
+    margin-top:3px;
+    font-size:.50rem;
+    font-weight:700;
+    letter-spacing:.10em;
+    color:#6F8398;
 }
 .brand-kicker {
     font-size:.82rem;
@@ -776,6 +799,10 @@ st.markdown(
         <div class="brand-tag">DECISIÓN DE COMPRA<br>COLORACIÓN</div>
       </div>
       <div class="brand-main">
+        <div class="goideas-mark">
+          <div class="goideas-mark-main">Go-Ideas</div>
+          <div class="goideas-mark-sub">INSIGHTS · ANALYTICS</div>
+        </div>
         <div class="brand-kicker">Resumen ejecutivo</div>
         <div class="brand-title">Así deciden la compra de tintes para cabello</div>
         <div class="brand-sub">Una visión clara de qué consideran, qué genera valor y qué puede cambiar su elección.</div>
