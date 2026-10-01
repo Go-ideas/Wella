@@ -40,7 +40,12 @@ from tendential import (
     categorical_tendential,
 )
 
-st.set_page_config(page_title="Wella | Decision Simulator", page_icon="🎯", layout="wide")
+st.set_page_config(
+    page_title="Wella | Decision Simulator",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 st.markdown(
     """
@@ -50,6 +55,19 @@ footer {visibility:hidden;}
 [data-testid="stToolbar"] {display:none !important;}
 [data-testid="stDecoration"] {display:none !important;}
 [data-testid="stStatusWidget"] {visibility:hidden;}
+[data-testid="stSidebar"] {
+    display:block !important;
+    visibility:visible !important;
+}
+[data-testid="stSidebarCollapsedControl"] {
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    background:linear-gradient(180deg,#F8FBFE 0%,#F2F6FA 100%);
+    border-right:1px solid #DDE6EF;
+}
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
@@ -1401,12 +1419,13 @@ df = st.session_state["dataset"]
 meta = st.session_state["metadata"]
 
 with st.sidebar:
+    st.markdown("## Filtros")
+    st.caption("Ajusta la lectura del estudio.")
     st.success("Estudio abierto")
     if st.button("Cerrar estudio", use_container_width=True):
         clear_loaded_data()
         st.rerun()
     st.divider()
-    st.markdown("### Filtra la lectura")
 
 filters = {}
 filter_labels = {
