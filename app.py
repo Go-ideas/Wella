@@ -2918,6 +2918,8 @@ elif page == "Qué pesa más":
 
     st.caption("Los scores MaxDiff expresan importancia relativa: se usan para ordenar y comparar factores, no como porcentajes de mención.")
 
+# LOCKED SECTION — RIESGO DE CAMBIO
+# Versión final aprobada por el usuario el 2026-10-01. No modificar sin solicitud explícita.
 elif page == "Qué pasa si falta...":
     # ===== Riesgo de cambio =====
     language = product_language(filters)
