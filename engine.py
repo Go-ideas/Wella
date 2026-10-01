@@ -349,29 +349,52 @@ def shelf_statistical_model(
         high = np.quantile(arr, 0.975, axis=0)
         order = np.argsort(-arr, axis=1)
         winners = order[:, 0]
-        top2 = order[:, : min(2, len(options))]
         stability = np.array([(winners == i).mean() for i in range(len(options))])
-        top2_prob = np.array([(top2 == i).any(axis=1).mean() for i in range(len(options))])
+
+        # Mean bootstrap rank gives a smooth measure of consistency instead of a
+        # binary Top-2 indicator. Rank 1 is best.
+        rank_matrix = np.empty_like(order, dtype=float)
+        row_idx = np.arange(order.shape[0])[:, None]
+        rank_matrix[row_idx, order] = np.arange(1, len(options) + 1, dtype=float)
+        mean_rank = rank_matrix.mean(axis=0)
     else:
         low = est.copy()
         high = est.copy()
         deterministic_order = np.argsort(-est)
         stability = np.zeros(len(options), dtype=float)
-        top2_prob = np.zeros(len(options), dtype=float)
         stability[int(deterministic_order[0])] = 1.0
-        for i in deterministic_order[: min(2, len(options))]:
-            top2_prob[int(i)] = 1.0
+        mean_rank = np.empty(len(options), dtype=float)
+        mean_rank[deterministic_order] = np.arange(1, len(options) + 1, dtype=float)
+
+    # Continuous executive recommendation score (0-100).
+    # 65% = relative Plackett-Luce worth versus the current leader.
+    # 35% = bootstrap rank consistency. The final score is normalized so the
+    # strongest option in the current selection equals 100.
+    max_est = max(float(est.max()), 1e-12)
+    relative_preference = est / max_est * 100.0
+    if len(options) > 1:
+        consistency_score = (len(options) - mean_rank) / (len(options) - 1) * 100.0
+    else:
+        consistency_score = np.array([100.0], dtype=float)
+    consistency_score = np.clip(consistency_score, 0.0, 100.0)
+
+    raw_recommendation = 0.65 * relative_preference + 0.35 * consistency_score
+    max_raw = max(float(raw_recommendation.max()), 1e-12)
+    recommendation_score = raw_recommendation / max_raw * 100.0
 
     out = pd.DataFrame({
         "organizacion": options,
+        "nivel_recomendacion": recommendation_score,
+        "preferencia_relativa": relative_preference,
+        "consistencia": consistency_score,
+        "posicion_media": mean_rank,
         "prob_estimada": est * 100,
         "ic_bajo": low * 100,
         "ic_alto": high * 100,
         "estabilidad_top1": stability * 100,
-        "prob_top2": top2_prob * 100,
         "n": n,
     })
-    return out.sort_values("prob_estimada", ascending=False).reset_index(drop=True)
+    return out.sort_values("nivel_recomendacion", ascending=False).reset_index(drop=True)
 
 
 def shelf_conditional_model(
