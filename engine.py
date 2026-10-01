@@ -5,6 +5,10 @@ import pandas as pd
 import numpy as np
 
 FILTER_COLUMNS = ["producto", "marca", "cadena", "edad_rango", "area_nielsen", "nse", "sexo"]
+
+# Anaquel statistical runtime: fixed for reproducibility in the client dashboard.
+SHELF_BOOTSTRAP_SEED = 20261001
+SHELF_BOOTSTRAP_REPS = 300
 MD_LABELS = {
     "md_necesidad": "Resolver necesidad principal",
     "md_tipo_producto": "Tipo de producto buscado",
@@ -286,8 +290,8 @@ def shelf_statistical_model(
     reference: pd.DataFrame | None = None,
     *,
     shrink_strength: float = 0.0,
-    bootstrap: int = 250,
-    seed: int = 20261001,
+    bootstrap: int = SHELF_BOOTSTRAP_REPS,
+    seed: int = SHELF_BOOTSTRAP_SEED,
 ) -> pd.DataFrame:
     """Statistical shelf ranking from A1/A2 using Plackett-Luce + bootstrap.
 
@@ -298,9 +302,19 @@ def shelf_statistical_model(
     For small filtered bases, optional partial pooling blends the filtered
     estimate toward the reference distribution.
     """
-    target = df[["anaquel_1", "anaquel_2"]].dropna().copy()
+    target = (
+        df[["anaquel_1", "anaquel_2"]]
+        .dropna()
+        .astype(str)
+        .sort_values(["anaquel_1", "anaquel_2"], kind="mergesort")
+        .reset_index(drop=True)
+    )
     ref = (
-        reference[["anaquel_1", "anaquel_2"]].dropna().copy()
+        reference[["anaquel_1", "anaquel_2"]]
+        .dropna()
+        .astype(str)
+        .sort_values(["anaquel_1", "anaquel_2"], kind="mergesort")
+        .reset_index(drop=True)
         if reference is not None and {"anaquel_1", "anaquel_2"}.issubset(reference.columns)
         else pd.DataFrame(columns=["anaquel_1", "anaquel_2"])
     )
