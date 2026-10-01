@@ -6,7 +6,8 @@ Streamlit app diseñada para desplegarse **sin datos del estudio**. El cliente c
 
 - GitHub contiene sólo código. No incluye `.db`, `.sav`, `.xlsx`, `.csv` ni `.goideas`.
 - El reporteador **no acepta bases en claro** desde la interfaz.
-- El archivo `.goideas` usa AES-256-GCM con una clave derivada mediante scrypt.
+- El archivo `.goideas` usa AES-256-GCM con claves derivadas mediante scrypt.
+- El formato v2 permite autorizar varias contraseñas sobre el mismo archivo sin guardar ninguna contraseña en GitHub ni en la app.
 - La base SQLite se descifra en RAM y se abre con `sqlite3.Connection.deserialize()`; no se escribe una copia descifrada a disco.
 - El DataFrame analítico permanece sólo en `st.session_state` durante la sesión.
 - El botón **Cerrar sesión y borrar datos de memoria** elimina dataset y metadatos de la sesión.
@@ -28,6 +29,9 @@ La base analítica `.db` se genera internamente y después se cifra:
 
 ```bash
 python tools/encrypt_database.py Wella_Analitica.db Wella_Coloracion.goideas
+
+# Para autorizar más de una contraseña sobre el mismo archivo:
+python tools/encrypt_database.py Wella_Analitica.db Wella_Coloracion.goideas --multi
 ```
 
 Entregar el archivo `.goideas` y la clave por **canales separados**.
