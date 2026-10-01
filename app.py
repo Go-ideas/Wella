@@ -1348,8 +1348,8 @@ def decision_tree_figure(
     # Separación vertical: suficiente para que las tarjetas de Cierre no se toquen,
     # sin volver a abrir demasiado todo el árbol.
     leaf_gap = 1.10
-    closure_gap = 1.30
-    d2_group_gap = 0.22
+    closure_gap = 1.55
+    d2_group_gap = 0.34
     branch_gap = 0.60
     for d1 in branches:
         d2_positions = []
@@ -1581,7 +1581,7 @@ def decision_tree_figure(
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
         # Rango invertido: encabezados arriba (-1.05) y ramas hacia abajo.
-        yaxis=dict(range=[max_y + 0.55, -1.62], visible=False, fixedrange=True),
+        yaxis=dict(range=[max_y + 0.68, -1.62], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
             orientation="h",
