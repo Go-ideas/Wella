@@ -266,3 +266,65 @@ def tree_links_tendential(
                 custom.append(f"Tendencial {r3['tendencial']:.1f}% dentro de la rama · observado {r3['observado']:.1f}%")
 
     return {"labels": labels, "source": source, "target": target_idx, "value": value, "custom": custom}
+
+
+def _mask_tendential(target_mask: pd.Series, reference_mask: pd.Series, *, strength: float = PRIOR_STRENGTH) -> dict:
+    t = pd.Series(target_mask).dropna().astype(bool)
+    r = pd.Series(reference_mask).dropna().astype(bool)
+    n = len(t)
+    k = int(t.sum())
+    p_ref = float(r.mean()) if len(r) else 0.5
+    a = k + p_ref * strength
+    b = (n - k) + (1 - p_ref) * strength
+    p = a / (a + b)
+    var = (a * b) / (((a + b) ** 2) * (a + b + 1))
+    se = sqrt(max(var, 0.0))
+    return {
+        "observado": (k / n * 100) if n else np.nan,
+        "tendencial": p * 100,
+        "rango_bajo": max(0.0, p - Z90 * se) * 100,
+        "rango_alto": min(1.0, p + Z90 * se) * 100,
+    }
+
+
+def shelf_pair_tendential(
+    target: pd.DataFrame,
+    reference: pd.DataFrame,
+    primary: str,
+    secondary: str,
+) -> dict:
+    exact_t = (target["anaquel_1"] == primary) & (target["anaquel_2"] == secondary)
+    exact_r = (reference["anaquel_1"] == primary) & (reference["anaquel_2"] == secondary)
+    top2_t = (
+        ((target["anaquel_1"] == primary) & (target["anaquel_2"] == secondary))
+        | ((target["anaquel_1"] == secondary) & (target["anaquel_2"] == primary))
+    )
+    top2_r = (
+        ((reference["anaquel_1"] == primary) & (reference["anaquel_2"] == secondary))
+        | ((reference["anaquel_1"] == secondary) & (reference["anaquel_2"] == primary))
+    )
+    coverage_t = target["anaquel_1"].isin([primary, secondary]) | target["anaquel_2"].isin([primary, secondary])
+    coverage_r = reference["anaquel_1"].isin([primary, secondary]) | reference["anaquel_2"].isin([primary, secondary])
+
+    e = _mask_tendential(exact_t, exact_r)
+    t = _mask_tendential(top2_t, top2_r)
+    c = _mask_tendential(coverage_t, coverage_r)
+    return {
+        "exact_order": e["tendencial"],
+        "top2_any_order": t["tendencial"],
+        "coverage": c["tendencial"],
+        "exact_observado": e["observado"],
+        "top2_observado": t["observado"],
+        "coverage_observado": c["observado"],
+    }
+
+
+def friction_tendential(target: pd.DataFrame, reference: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
+    easy_t = target["facilidad_encontrar"].isin(["Fácil", "Muy fácil"])
+    easy_r = reference["facilidad_encontrar"].isin(["Fácil", "Muy fácil"])
+    easy = _mask_tendential(easy_t, easy_r)
+
+    tbar = target[target["barrera_principal"].notna()].copy()
+    rbar = reference[reference["barrera_principal"].notna()].copy()
+    barriers = categorical_tendential(tbar, rbar, "barrera_principal", label_name="barrera")
+    return easy, barriers
