@@ -699,6 +699,48 @@ section[data-testid="stSidebar"] > div,
 .driver-panel-sub{font-size:.78rem;color:#74889D;margin-top:2px;margin-bottom:4px}
 .driver-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.48;color:#35516E}
 .driver-insight b{color:#153A60}
+.risk-header{
+    border:1px solid #DCE6EF;
+    border-radius:20px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
+    padding:18px 20px;
+    margin:6px 0 14px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:20px;
+    align-items:center;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.risk-header-main{display:flex;align-items:center;gap:14px;min-width:0}
+.risk-header-icon{width:54px;height:54px;border-radius:16px;background:#FFF1F3;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.risk-header-kicker{font-size:.70rem;letter-spacing:.11em;font-weight:800;color:#7890A8;text-transform:uppercase;margin-bottom:4px}
+.risk-header-title{font-size:1.55rem;line-height:1.08;font-weight:800;color:#12365A;margin-bottom:4px}
+.risk-header-sub{font-size:.88rem;color:#708399;line-height:1.35}
+.risk-meta{min-width:145px;border:1px solid #E0E9F1;background:#F7FAFD;border-radius:14px;padding:10px 12px}
+.risk-meta-label{font-size:.66rem;color:#7B90A6;margin-bottom:3px}
+.risk-meta-value{font-size:.98rem;font-weight:800;color:#173A5E}
+.risk-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.risk-kpi-card{border:1px solid #DCE6EF;border-radius:18px;background:#FFF;padding:16px 17px;min-height:138px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 14px rgba(22,56,88,.035)}
+.risk-kpi-top{display:flex;align-items:center;gap:10px}
+.risk-kpi-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.risk-kpi-label{font-size:.78rem;font-weight:800;color:#173A5E;line-height:1.2}
+.risk-kpi-value{font-size:1.62rem;font-weight:800;line-height:1;color:#153A60;margin-top:12px}
+.risk-kpi-note{font-size:.72rem;line-height:1.35;color:#7A8EA4;margin-top:6px}
+.st-key-risk_sim_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-risk_insight_panel [data-testid="stVerticalBlockBorderWrapper"]{
+    border:1px solid #DCE6EF!important;
+    border-radius:20px!important;
+    background:#FFF!important;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.risk-panel-title{font-size:1.08rem;font-weight:800;color:#153A60}
+.risk-panel-sub{font-size:.78rem;color:#74889D;margin-top:2px;margin-bottom:8px}
+.risk-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#FFF8F9,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E}
+.risk-insight b{color:#153A60}
+@media(max-width:900px){
+    .risk-header{grid-template-columns:1fr}
+    .risk-kpi-grid{grid-template-columns:1fr}
+}
 @media(max-width:900px){
     .drivers-header{grid-template-columns:1fr}
     .driver-top-grid{grid-template-columns:1fr}
@@ -2874,64 +2916,161 @@ elif page == "Qué pesa más":
     st.caption("Los scores MaxDiff expresan importancia relativa: se usan para ordenar y comparar factores, no como porcentajes de mención.")
 
 elif page == "Qué pasa si falta...":
+    # ===== Riesgo de cambio =====
     language = product_language(filters)
-    st.markdown("### Qué pasa cuando algo no está disponible")
-    st.caption(
-        f"Explora qué harían los compradores si no encuentran la marca, el {language['concept']} o la promoción que esperaban."
-    )
 
     if is_tendential:
         k = tendential_kpis(filtered, reference)
     else:
         k = substitution_kpis(filtered)
 
-    a, b, c = st.columns(3)
-    a.metric("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
-    b.metric(f"Si falta su {language['short']}, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
-    c.metric("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
+    brand_risk = float(k["cambia_marca_si_falta_marca"])
+    tone_risk = float(k["cambia_marca_para_conservar_tono"])
+    promo_resilience = float(k["compra_sin_promocion"])
 
-    scenario_display = st.selectbox(
-        "Quiero probar qué pasa cuando:",
-        ["Marca no disponible", language["missing"], "Sin promoción"],
+    st.markdown(
+        f"""
+        <div class="risk-header">
+          <div class="risk-header-main">
+            <div class="risk-header-icon">{icon_svg("warning", "#C7435B")}</div>
+            <div>
+              <div class="risk-header-kicker">Riesgo de cambio</div>
+              <div class="risk-header-title">Qué pasa si no encuentra lo que quiere</div>
+              <div class="risk-header-sub">Mide qué tan fácil es perder la elección cuando falta la marca, el {html.escape(language["concept"])} o la promoción.</div>
+            </div>
+          </div>
+          <div class="risk-meta">
+            <div class="risk-meta-label">Base analizada</div>
+            <div class="risk-meta-value">{n} entrevistas</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    scenario = (
-        "Tono/color no disponible"
-        if scenario_display == language["missing"]
-        else scenario_display
-    )
-    sim_n = st.slider("Número de compradores para visualizar", 100, 5000, 1000, 100)
 
-    if is_tendential:
-        t = substitution_tendential(filtered, reference, scenario).copy()
-        t["esperados"] = (t["tendencial"] * sim_n / 100).round().astype(int)
-        t["etiqueta"] = t.apply(lambda r: f"{r['tendencial']:.1f}% · {int(r['esperados'])}", axis=1)
+    st.markdown(
+        '<div class="risk-kpi-grid">'
+        '<div class="risk-kpi-card">'
+        '<div><div class="risk-kpi-top">'
+        f'<div class="risk-kpi-icon" style="background:#FFF1F3">{icon_svg("swap", "#C7435B")}</div>'
+        '<div class="risk-kpi-label">Si falta la marca</div></div>'
+        f'<div class="risk-kpi-value">{brand_risk:.1f}%</div>'
+        '<div class="risk-kpi-note">cambiaría a otra marca en lugar de conservar la marca buscada.</div></div>'
+        '</div>'
+        '<div class="risk-kpi-card">'
+        '<div><div class="risk-kpi-top">'
+        f'<div class="risk-kpi-icon" style="background:#FFF6E9">{icon_svg("hair", "#C77A19")}</div>'
+        f'<div class="risk-kpi-label">Si falta su {html.escape(language["short"])}</div></div>'
+        f'<div class="risk-kpi-value">{tone_risk:.1f}%</div>'
+        f'<div class="risk-kpi-note">cambiaría de marca para conservar el {html.escape(language["concept"])} que busca.</div></div>'
+        '</div>'
+        '<div class="risk-kpi-card">'
+        '<div><div class="risk-kpi-top">'
+        f'<div class="risk-kpi-icon" style="background:#EAF7F0">{icon_svg("check", "#237A4B")}</div>'
+        '<div class="risk-kpi-label">Sin promoción</div></div>'
+        f'<div class="risk-kpi-value">{promo_resilience:.1f}%</div>'
+        '<div class="risk-kpi-note">compraría el producto de todos modos; indica resiliencia frente a la promoción.</div></div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container(key="risk_sim_panel", border=True):
+        st.markdown('<div class="risk-panel-title">Simula una situación de riesgo</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="risk-panel-sub">Selecciona el escenario y traduce el patrón observado a un número concreto de compradores.</div>',
+            unsafe_allow_html=True,
+        )
+
+        c1, c2 = st.columns([1.35, .65])
+        with c1:
+            scenario_display = st.segmented_control(
+                "Escenario",
+                options=["Marca no disponible", language["missing"], "Sin promoción"],
+                default="Marca no disponible",
+                key="risk_scenario",
+            )
+        with c2:
+            sim_n = st.select_slider(
+                "Compradores a visualizar",
+                options=[100, 250, 500, 1000, 2500, 5000],
+                value=1000,
+                key="risk_sim_n",
+            )
+
+        scenario = (
+            "Tono/color no disponible"
+            if scenario_display == language["missing"]
+            else scenario_display
+        )
+
+        if is_tendential:
+            t = substitution_tendential(filtered, reference, scenario).copy()
+            t["porcentaje"] = t["tendencial"]
+        else:
+            t = scenario_counts(filtered, scenario, sim_n).copy()
+            t["porcentaje"] = t["pct"]
+
+        if is_tendential:
+            t["esperados"] = (t["porcentaje"] * sim_n / 100).round().astype(int)
+        elif "esperados" not in t.columns:
+            t["esperados"] = (t["porcentaje"] * sim_n / 100).round().astype(int)
+
+        t = t.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+        t["etiqueta"] = t.apply(
+            lambda r: f"{float(r['porcentaje']):.1f}% · {int(r['esperados'])}",
+            axis=1,
+        )
+
         fig = px.bar(
-            t,
-            x="tendencial",
+            t.sort_values("porcentaje"),
+            x="porcentaje",
             y="respuesta",
             orientation="h",
             text="etiqueta",
-            title="Qué harían los compradores",
-            labels={"tendencial": "Porcentaje", "respuesta": ""},
+            labels={"porcentaje": "Porcentaje", "respuesta": ""},
         )
-    else:
-        t = scenario_counts(filtered, scenario, sim_n).copy()
-        t["etiqueta"] = t.apply(lambda r: f"{r['pct']:.1f}% · {int(r['esperados'])}", axis=1)
-        fig = px.bar(
-            t,
-            x="pct",
-            y="respuesta",
-            orientation="h",
-            text="etiqueta",
-            title="Qué harían los compradores",
-            labels={"pct": "Porcentaje", "respuesta": ""},
+        fig.update_traces(textposition="outside", cliponaxis=False)
+        max_pct = float(t["porcentaje"].max()) if len(t) else 0.0
+        fig.update_layout(
+            height=max(430, 110 + len(t) * 46),
+            margin=dict(l=10, r=90, t=18, b=28),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            yaxis=dict(categoryorder="total ascending"),
+            xaxis=dict(range=[0, max(100, max_pct * 1.22)]),
         )
+        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
+        st.plotly_chart(fig, use_container_width=True)
 
-    fig.update_traces(textposition="outside")
-    fig.update_layout(yaxis={"categoryorder": "total ascending"})
-    polish_bar(fig, height=500, percent_axis=True)
-    st.plotly_chart(fig, use_container_width=True)
-    st.caption("Ejemplo: “42.0% · 420” equivale a 420 de cada 1,000 compradores bajo el patrón seleccionado.")
+        if len(t):
+            lead = t.iloc[0]
+            lead_label = str(lead["respuesta"])
+            lead_pct = float(lead["porcentaje"])
+            lead_n = int(lead["esperados"])
+
+            if scenario == "Marca no disponible":
+                context = (
+                    f"Ante la falta de marca, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
+                    f"({lead_pct:.1f}%, equivalente a {lead_n} de cada {sim_n:,} compradores)."
+                )
+            elif scenario == "Tono/color no disponible":
+                context = (
+                    f"Si falta el {html.escape(language['concept'])}, la reacción dominante es "
+                    f"<b>{html.escape(lead_label)}</b> ({lead_pct:.1f}%, {lead_n} de cada {sim_n:,})."
+                )
+            else:
+                context = (
+                    f"Sin promoción, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
+                    f"({lead_pct:.1f}%, {lead_n} de cada {sim_n:,})."
+                )
+
+            st.markdown(
+                f'<div class="risk-insight">{context}</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.caption("La simulación traduce los porcentajes observados a un número equivalente de compradores; no es una proyección de ventas.")
 
 elif page == "Cómo ordenar el anaquel":
     st.markdown("### Cómo facilitar la compra en anaquel")
