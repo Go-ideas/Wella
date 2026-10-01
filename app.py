@@ -737,6 +737,56 @@ section[data-testid="stSidebar"] > div,
 .risk-panel-sub{font-size:.78rem;color:#74889D;margin-top:2px;margin-bottom:8px}
 .risk-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#FFF8F9,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E}
 .risk-insight b{color:#153A60}
+.shelf-header{
+    border:1px solid #DCE6EF;
+    border-radius:20px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
+    padding:18px 20px;
+    margin:6px 0 14px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:20px;
+    align-items:center;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.shelf-header-main{display:flex;align-items:center;gap:14px;min-width:0}
+.shelf-header-icon{width:54px;height:54px;border-radius:16px;background:#EEF7FF;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.shelf-header-kicker{font-size:.70rem;letter-spacing:.11em;font-weight:800;color:#7890A8;text-transform:uppercase;margin-bottom:4px}
+.shelf-header-title{font-size:1.55rem;line-height:1.08;font-weight:800;color:#12365A;margin-bottom:4px}
+.shelf-header-sub{font-size:.88rem;color:#708399;line-height:1.35}
+.shelf-meta{min-width:145px;border:1px solid #E0E9F1;background:#F7FAFD;border-radius:14px;padding:10px 12px}
+.shelf-meta-label{font-size:.66rem;color:#7B90A6;margin-bottom:3px}
+.shelf-meta-value{font-size:.98rem;font-weight:800;color:#173A5E}
+.shelf-top-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.shelf-top-card{border:1px solid #DCE6EF;border-radius:18px;background:#FFF;padding:15px 16px;min-height:120px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;box-shadow:0 4px 14px rgba(22,56,88,.035)}
+.shelf-rank{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#E8F3FC;color:#1D6FB5}
+.shelf-card-kicker{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#758AA1;margin-bottom:5px}
+.shelf-card-name{font-size:.92rem;line-height:1.2;font-weight:800;color:#173A5E}
+.shelf-card-value{font-size:1.30rem;font-weight:800;color:#0F65AA;white-space:nowrap;text-align:right}
+.shelf-card-note{font-size:.68rem;color:#8090A2;margin-top:5px;line-height:1.25}
+.st-key-shelf_rank_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-shelf_combo_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-shelf_friction_panel [data-testid="stVerticalBlockBorderWrapper"]{
+    border:1px solid #DCE6EF!important;
+    border-radius:20px!important;
+    background:#FFF!important;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.shelf-panel-title{font-size:1.08rem;font-weight:800;color:#153A60}
+.shelf-panel-sub{font-size:.78rem;color:#74889D;margin-top:2px;margin-bottom:8px}
+.shelf-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.shelf-kpi{border:1px solid #E2EAF2;background:#F8FBFE;border-radius:15px;padding:12px 13px}
+.shelf-kpi-label{font-size:.68rem;color:#7A8EA4;line-height:1.25}
+.shelf-kpi-value{font-size:1.25rem;font-weight:800;color:#153A60;margin-top:4px}
+.shelf-ease-box{display:flex;align-items:center;gap:12px;border:1px solid #DCE6EF;background:#F7FBFF;border-radius:16px;padding:14px 15px;margin-bottom:10px}
+.shelf-ease-value{font-size:1.55rem;font-weight:800;color:#0F65AA}
+.shelf-ease-copy{font-size:.78rem;line-height:1.35;color:#60778D}
+.shelf-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E;margin-top:10px}
+.shelf-insight b{color:#153A60}
+@media(max-width:900px){
+    .shelf-header{grid-template-columns:1fr}
+    .shelf-top-grid,.shelf-kpi-grid{grid-template-columns:1fr}
+}
 @media(max-width:900px){
     .risk-header{grid-template-columns:1fr}
     .risk-kpi-grid{grid-template-columns:1fr}
@@ -3059,93 +3109,200 @@ elif page == "Qué pasa si falta...":
     st.caption("Los porcentajes describen la reacción declarada ante cada escenario; no representan una proyección de ventas.")
 
 elif page == "Cómo ordenar el anaquel":
-    st.markdown("### Cómo facilitar la compra en anaquel")
-    st.caption("Muestra qué forma de organizar el anaquel ayuda más a encontrar rápidamente el producto.")
-
+    # ===== Anaquel =====
     if is_tendential:
-        priority = shelf_priority_tendential(filtered, reference)
-        priority["etiqueta"] = priority["indice_tendencial"].map(lambda x: f"{x:.1f}")
-        fig = px.bar(
-            priority,
-            x="indice_tendencial",
-            y="organizacion",
-            orientation="h",
-            text="etiqueta",
-            title="Qué organización ayuda más",
-            labels={"indice_tendencial": "Prioridad", "organizacion": ""},
-        )
+        priority = shelf_priority_tendential(filtered, reference).copy()
+        priority["valor"] = priority["indice_tendencial"]
+        easy, barriers = friction_tendential(filtered, reference)
+        easy_value = float(easy["tendencial"])
+        reading_label = "Lectura tendencial"
     else:
-        priority = shelf_priority(filtered)
-        priority["etiqueta"] = priority["indice_prioridad"].map(lambda x: f"{x:.1f}")
-        fig = px.bar(
-            priority,
-            x="indice_prioridad",
-            y="organizacion",
-            orientation="h",
-            text="etiqueta",
-            title="Qué organización ayuda más",
-            labels={"indice_prioridad": "Prioridad", "organizacion": ""},
+        priority = shelf_priority(filtered).copy()
+        priority["valor"] = priority["indice_prioridad"]
+        easy_value, barriers = friction_summary(filtered)
+        easy_value = float(easy_value)
+        reading_label = "Selección actual"
+
+    priority = priority.sort_values("valor", ascending=False).reset_index(drop=True)
+    top3 = priority.head(3).copy()
+
+    st.markdown(
+        f"""
+        <div class="shelf-header">
+          <div class="shelf-header-main">
+            <div class="shelf-header-icon">{icon_svg("grid", "#1D6FB5")}</div>
+            <div>
+              <div class="shelf-header-kicker">Anaquel</div>
+              <div class="shelf-header-title">Cómo facilitar la compra en anaquel</div>
+              <div class="shelf-header-sub">Identifica qué forma de organización ayuda más a encontrar rápido el producto y qué fricciones todavía permanecen.</div>
+            </div>
+          </div>
+          <div class="shelf-meta">
+            <div class="shelf-meta-label">Base analizada</div>
+            <div class="shelf-meta-value">{n} entrevistas</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    cards = '<div class="shelf-top-grid">'
+    for rank, (_, row) in enumerate(top3.iterrows(), start=1):
+        cards += (
+            '<div class="shelf-top-card">'
+            f'<div class="shelf-rank">{rank}</div>'
+            '<div>'
+            f'<div class="shelf-card-kicker">Prioridad #{rank}</div>'
+            f'<div class="shelf-card-name">{html.escape(str(row["organizacion"]))}</div>'
+            '<div class="shelf-card-note">Combina primera y segunda ayuda declarada.</div>'
+            '</div>'
+            f'<div class="shelf-card-value">{float(row["valor"]):.1f}</div>'
+            '</div>'
+        )
+    cards += '</div>'
+    st.markdown(cards, unsafe_allow_html=True)
+
+    with st.container(key="shelf_rank_panel", border=True):
+        st.markdown('<div class="shelf-panel-title">Ranking de organización</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="shelf-panel-sub">Mayor índice = mayor prioridad para facilitar la navegación del anaquel.</div>',
+            unsafe_allow_html=True,
         )
 
-    fig.update_traces(textposition="outside")
-    fig.update_layout(yaxis={"categoryorder": "total ascending"})
-    polish_bar(fig, height=500)
-    st.plotly_chart(fig, use_container_width=True)
-    st.caption("El valor combina lo que las personas mencionaron como primera y segunda ayuda. Más alto = mayor prioridad.")
+        shown = priority.copy()
+        shown["etiqueta"] = shown["valor"].map(lambda x: f"{float(x):.1f}")
+        fig = px.bar(
+            shown.sort_values("valor"),
+            x="valor",
+            y="organizacion",
+            orientation="h",
+            text="etiqueta",
+            labels={"valor": "Índice de prioridad", "organizacion": ""},
+        )
+        fig.update_traces(textposition="outside", cliponaxis=False)
+        max_val = float(shown["valor"].max()) if len(shown) else 0.0
+        fig.update_layout(
+            height=max(430, 100 + len(shown) * 44),
+            margin=dict(l=10, r=70, t=18, b=28),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            yaxis=dict(categoryorder="total ascending"),
+            xaxis=dict(range=[0, max_val * 1.18 if max_val > 0 else 1]),
+        )
+        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False)
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("El índice combina lo que las personas mencionaron como primera y segunda ayuda para navegar el anaquel.")
 
     opts = priority["organizacion"].tolist()
-    left, right = st.columns(2)
-    primary = left.selectbox("Primero organizar por:", opts, index=0)
-    sec_opts = [x for x in opts if x != primary]
-    secondary = right.selectbox("Después organizar por:", sec_opts, index=0)
 
-    if is_tendential:
-        pair = shelf_pair_tendential(filtered, reference, primary, secondary)
-        easy, barriers = friction_tendential(filtered, reference)
-        easy_value = easy["tendencial"]
-    else:
-        pair = shelf_pair_score(filtered, primary, secondary)
-        easy_value, barriers = friction_summary(filtered)
+    with st.container(key="shelf_combo_panel", border=True):
+        st.markdown('<div class="shelf-panel-title">Prueba una organización de anaquel</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="shelf-panel-sub">Selecciona qué debería guiar primero y qué debería apoyar después.</div>',
+            unsafe_allow_html=True,
+        )
 
-    x, y, z = st.columns(3)
-    x.metric("Coincide exactamente con esta combinación", f"{pair['exact_order']:.1f}%")
-    y.metric("Estas dos opciones aparecen entre las 2 principales", f"{pair['top2_any_order']:.1f}%")
-    z.metric("Al menos una de las dos ayuda", f"{pair['coverage']:.1f}%")
+        left, right = st.columns(2)
+        primary = left.selectbox(
+            "Organizar primero por",
+            opts,
+            index=0,
+            key="shelf_primary",
+        )
+        sec_opts = [x for x in opts if x != primary]
+        secondary = right.selectbox(
+            "Después apoyar con",
+            sec_opts,
+            index=0,
+            key="shelf_secondary",
+        )
 
-    st.markdown(f"**{easy_value:.1f}%** encontró el producto fácil o muy fácil.")
-
-    if len(barriers):
         if is_tendential:
-            barriers = barriers.copy()
-            barriers["etiqueta"] = barriers["tendencial"].map(lambda x: f"{x:.1f}%")
-            fig2 = px.bar(
-                barriers,
-                x="tendencial",
-                y="barrera",
-                orientation="h",
-                text="etiqueta",
-                title="Qué dificulta encontrar el producto",
-                labels={"tendencial": "Porcentaje", "barrera": ""},
-            )
+            pair = shelf_pair_tendential(filtered, reference, primary, secondary)
         else:
+            pair = shelf_pair_score(filtered, primary, secondary)
+
+        st.markdown(
+            f"""
+            <div class="shelf-kpi-grid">
+              <div class="shelf-kpi">
+                <div class="shelf-kpi-label">Orden exacto: primero {html.escape(primary)}, después {html.escape(secondary)}</div>
+                <div class="shelf-kpi-value">{float(pair["exact_order"]):.1f}%</div>
+              </div>
+              <div class="shelf-kpi">
+                <div class="shelf-kpi-label">Ambas aparecen entre las 2 principales, sin importar el orden</div>
+                <div class="shelf-kpi-value">{float(pair["top2_any_order"]):.1f}%</div>
+              </div>
+              <div class="shelf-kpi">
+                <div class="shelf-kpi-label">Al menos una de estas dos ayudas aparece en el Top 2</div>
+                <div class="shelf-kpi-value">{float(pair["coverage"]):.1f}%</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            f'<div class="shelf-insight">La combinación <b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> '
+            f'cubre al menos una de las dos ayudas para <b>{float(pair["coverage"]):.1f}%</b> de los compradores.</div>',
+            unsafe_allow_html=True,
+        )
+
+    with st.container(key="shelf_friction_panel", border=True):
+        st.markdown('<div class="shelf-panel-title">Fricción real al encontrar el producto</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="shelf-panel-sub">Contrasta la organización deseada con la experiencia real de búsqueda.</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            f"""
+            <div class="shelf-ease-box">
+              <div class="shelf-ease-value">{easy_value:.1f}%</div>
+              <div class="shelf-ease-copy">encontró el producto <b>fácil o muy fácil</b>. El resto representa espacio potencial para mejorar navegación, señalización y claridad.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if len(barriers):
             barriers = barriers.copy()
-            barriers["etiqueta"] = barriers["pct"].map(lambda x: f"{x:.1f}%")
+            if is_tendential:
+                barriers["porcentaje"] = barriers["tendencial"]
+            else:
+                barriers["porcentaje"] = barriers["pct"]
+
+            barriers = barriers.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+            barriers["etiqueta"] = barriers["porcentaje"].map(lambda x: f"{float(x):.1f}%")
             fig2 = px.bar(
-                barriers,
-                x="pct",
+                barriers.sort_values("porcentaje"),
+                x="porcentaje",
                 y="barrera",
                 orientation="h",
                 text="etiqueta",
-                title="Qué dificulta encontrar el producto",
-                labels={"pct": "Porcentaje", "barrera": ""},
+                labels={"porcentaje": "Porcentaje", "barrera": ""},
             )
-        fig2.update_traces(textposition="outside")
-        fig2.update_layout(yaxis={"categoryorder": "total ascending"})
-        polish_bar(fig2, height=420, percent_axis=True)
-        st.plotly_chart(fig2, use_container_width=True)
+            fig2.update_traces(textposition="outside", cliponaxis=False)
+            max_bar = float(barriers["porcentaje"].max()) if len(barriers) else 0.0
+            fig2.update_layout(
+                height=max(390, 95 + len(barriers) * 44),
+                margin=dict(l=10, r=80, t=18, b=28),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                yaxis=dict(categoryorder="total ascending"),
+                xaxis=dict(range=[0, max(100, max_bar * 1.20)]),
+            )
+            fig2.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
+            st.plotly_chart(fig2, use_container_width=True)
 
-    st.caption("Esta lectura permite comparar qué formas de organización resultan más útiles para encontrar el producto.")
+            lead_barrier = barriers.iloc[0]
+            st.markdown(
+                f'<div class="shelf-insight">La principal fricción declarada es <b>{html.escape(str(lead_barrier["barrera"]))}</b> '
+                f'({float(lead_barrier["porcentaje"]):.1f}%).</div>',
+                unsafe_allow_html=True,
+            )
 
+    st.caption("A1 y A2 identifican qué ayudaría primero y después a navegar el anaquel; E1 y E2 muestran qué tan fácil fue encontrar el producto y qué lo dificultó.")
 
 
 st.markdown(
