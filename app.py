@@ -26,7 +26,15 @@ from engine import (
     shelf_pair_score,
     friction_summary,
 )
-from secure_io import EncryptedPackageError, decrypt_sqlite_bytes, package_fingerprint, sqlite_connection_from_bytes
+from secure_io import (
+    MAGIC,
+    VERSION,
+    VERSION_MULTI,
+    EncryptedPackageError,
+    decrypt_sqlite_bytes,
+    package_fingerprint,
+    sqlite_connection_from_bytes,
+)
 from tendential import (
     tendential_eligible,
     tendential_kpis,
@@ -1845,6 +1853,18 @@ if uploaded is None:
     st.stop()
 
 package_bytes = uploaded.getvalue()
+
+# Validación explícita del formato seguro. También fuerza al despliegue a usar
+# el runtime de cifrado actualizado que soporta paquetes multi-clave v2.
+if not package_bytes.startswith(MAGIC) or len(package_bytes) <= len(MAGIC):
+    st.error("El archivo no corresponde al formato seguro del estudio.")
+    st.stop()
+
+package_version = package_bytes[len(MAGIC)]
+if package_version not in {VERSION, VERSION_MULTI}:
+    st.error("El archivo utiliza una versión de seguridad no soportada por esta aplicación.")
+    st.stop()
+
 fp = package_fingerprint(package_bytes)
 
 if "dataset" in st.session_state and st.session_state.get("package_fp") != fp:
