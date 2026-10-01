@@ -1205,6 +1205,18 @@ def _wrap_tree_label(text: str, width: int = 23) -> str:
     return "<br>".join(lines)
 
 
+def short_tree_label(label: str) -> str:
+    """Versión corta para nodos; el hover conserva el texto original."""
+    mapping = {
+        "Los beneficios del producto": "Beneficios del producto",
+        "Que fuera fácil de aplicar": "Fácil de aplicar",
+        "La necesidad que quería resolver": "Necesidad a resolver",
+        "Mi experiencia previa con el producto": "Experiencia previa",
+        "Que estuviera disponible": "Disponible",
+    }
+    return mapping.get(str(label), str(label))
+
+
 def decision_tree_figure(
     data: pd.DataFrame,
     reference_data: pd.DataFrame,
@@ -1350,7 +1362,7 @@ def decision_tree_figure(
 
     fig = go.Figure()
 
-    x_root, x_d1, x_d2, x_d3 = 0.25, 1.25, 2.45, 3.65
+    x_root, x_d1, x_d2, x_d3 = 0.20, 1.25, 2.55, 3.90
     main_blue = "#2F80ED"
     main_fill = "#F3F8FF"
     main_border = "#2F80ED"
@@ -1390,7 +1402,7 @@ def decision_tree_figure(
         if root:
             fig.add_annotation(
                 x=x, y=y,
-                text="<b>Compra</b><br><span style='font-size:11px'>100%</span>",
+                text="<b>Compra</b><br><span style='font-size:12px'>100%</span>",
                 showarrow=False,
                 xanchor="center",
                 yanchor="middle",
@@ -1398,41 +1410,56 @@ def decision_tree_figure(
                 bgcolor="#0E3A63",
                 bordercolor="#0E3A63",
                 borderwidth=1,
-                borderpad=11,
-                font=dict(size=13, color="white"),
+                borderpad=12,
+                font=dict(size=13.5, color="white"),
             )
             return
 
-        display_label = (
-            str(label)
-            .replace("Mi experiencia previa con el producto", "Mi experiencia previa")
-            .replace("La necesidad que quería resolver", "Necesidad que quería resolver")
-        )
-        wrapped = _wrap_tree_label(display_label, width=22)
-        card_text = (
-            f"<b>{wrapped}</b>"
-            f"<br><span style='color:{main_blue if highlight else '#315574'}'><b>{pct:.1f}%</b></span>"
-        )
+        full_label = str(label)
+        display_label = short_tree_label(full_label)
+        wrapped = _wrap_tree_label(display_label, width=19)
+
+        # Tarjeta principal: el texto nunca compite visualmente con el porcentaje.
         fig.add_annotation(
-            x=x, y=y,
-            text=card_text,
+            x=x - 0.035,
+            y=y,
+            text=f"<b>{wrapped}</b>",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
             align="left",
             bgcolor=main_fill if highlight else other_fill,
             bordercolor=main_border if highlight else other_border,
-            borderwidth=1.5 if highlight else 1,
-            borderpad=8,
-            font=dict(size=11.5, color=text_color),
-            width=176,
+            borderwidth=1.6 if highlight else 1,
+            borderpad=10,
+            font=dict(size=12.2, color=text_color),
+            width=205,
+            height=50,
         )
+
+        # Porcentaje fijo: siempre visible y alineado a la derecha del nodo.
+        fig.add_annotation(
+            x=x + 0.205,
+            y=y,
+            text=f"<b>{pct:.1f}%</b>",
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            align="center",
+            bgcolor=main_blue if highlight else "#EAF2FA",
+            bordercolor=main_blue if highlight else "#D1DFEC",
+            borderwidth=1,
+            borderpad=5,
+            font=dict(size=13.8, color="white" if highlight else "#173A5E"),
+        )
+
+        # Zona invisible de hover sobre el nodo completo.
         fig.add_trace(go.Scatter(
             x=[x],
             y=[y],
             mode="markers",
-            marker=dict(size=48, color="rgba(0,0,0,0)"),
-            customdata=[[label, pct, base, mode]],
+            marker=dict(size=58, color="rgba(0,0,0,0)"),
+            customdata=[[full_label, pct, base, mode]],
             hovertemplate=(
                 "<b>%{customdata[0]}</b>"
                 "<br>%{customdata[1]:.1f}% dentro de esta rama"
@@ -1515,7 +1542,7 @@ def decision_tree_figure(
         margin=dict(l=24, r=44, t=78, b=25),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        xaxis=dict(range=[-0.05, 4.12], visible=False, fixedrange=True),
+        xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
         yaxis=dict(range=[0.04, 1.10], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
