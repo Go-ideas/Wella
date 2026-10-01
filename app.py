@@ -93,6 +93,72 @@ st.markdown(
     width:max-content;
     max-width:100%;
 }
+.base-strip {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:4px 0 18px 0;
+    color:#506176;
+    font-size:.92rem;
+}
+.base-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 11px;
+    border-radius:999px;
+    background:#EEF4FA;
+    color:#183B5B;
+    font-weight:600;
+}
+.flow-wrap {
+    display:grid;
+    grid-template-columns:1fr 42px 1fr 42px 1fr;
+    align-items:stretch;
+    gap:8px;
+    margin:6px 0 22px 0;
+}
+.flow-step {
+    border:1px solid #DCE5EE;
+    border-radius:18px;
+    padding:18px 20px;
+    background:#FBFCFE;
+    min-height:150px;
+}
+.flow-kicker {
+    color:#65758A;
+    font-size:.82rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:10px;
+}
+.flow-value {
+    color:#102A43;
+    font-size:1.55rem;
+    line-height:1.18;
+    font-weight:600;
+    overflow-wrap:anywhere;
+}
+.flow-note {
+    color:#667085;
+    font-size:.88rem;
+    line-height:1.35;
+    margin-top:10px;
+}
+.flow-arrow {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#8BA1B8;
+    font-size:1.8rem;
+    font-weight:300;
+}
+@media (max-width: 900px) {
+    .flow-wrap {grid-template-columns:1fr; gap:8px;}
+    .flow-arrow {transform:rotate(90deg); min-height:24px;}
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -295,23 +361,76 @@ if page == "Resumen":
     st.caption("Una lectura rápida de cómo se toma la decisión y qué tan fácil es cambiar de opción.")
     k = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
 
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        kpi_card("Entrevistas analizadas", f"{n}", quality)
-    with c2:
-        kpi_card("La secuencia describe su compra", f"{k['validacion_arbol']:.1f}%")
-    with c3:
-        kpi_card("Lo primero que se decide", k["primer_gate"] or "—")
-    with c4:
-        kpi_card("Lo que más pesa al elegir", k["top_driver"] or "—")
+    st.markdown(
+        f'<div class="base-strip">'
+        f'<span class="base-pill">Base: {n} entrevistas</span>'
+        f'<span class="base-pill">{html.escape(str(quality))}</span>'
+        f'<span>La secuencia declarada describe la compra para <b>{k["validacion_arbol"]:.1f}%</b> de los entrevistados.</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
-    c5, c6, c7 = st.columns(3)
-    with c5:
-        kpi_card("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
-    with c6:
-        kpi_card("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
-    with c7:
-        kpi_card("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
+    first_value = html.escape(str(k["primer_gate"] or "—"))
+    driver_value = html.escape(str(k["top_driver"] or "—"))
+    validation_value = f'{k["validacion_arbol"]:.1f}%'
+
+    st.markdown(
+        f'<div class="flow-wrap">'
+        f'<div class="flow-step">'
+        f'<div class="flow-kicker">1 · Lo primero que se decide</div>'
+        f'<div class="flow-value">{first_value}</div>'
+        f'<div class="flow-note">Es el criterio que aparece primero al comenzar la elección.</div>'
+        f'</div>'
+        f'<div class="flow-arrow">→</div>'
+        f'<div class="flow-step">'
+        f'<div class="flow-kicker">2 · Lo que más pesa</div>'
+        f'<div class="flow-value">{driver_value}</div>'
+        f'<div class="flow-note">Es el factor con mayor importancia relativa al elegir entre alternativas.</div>'
+        f'</div>'
+        f'<div class="flow-arrow">→</div>'
+        f'<div class="flow-step">'
+        f'<div class="flow-kicker">3 · Qué tan bien representa la compra</div>'
+        f'<div class="flow-value">{validation_value}</div>'
+        f'<div class="flow-note">Porcentaje que confirma que la secuencia refleja su forma de decidir.</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### ¿Qué pasa si una opción no está disponible?")
+    st.caption("Estas tres medidas muestran qué tan fácil es que el comprador cambie de opción o mantenga la compra.")
+
+    substitution_view = pd.DataFrame({
+        "situacion": [
+            "Falta su marca → cambia de marca",
+            "Falta su tono → cambia de marca",
+            "No hay promoción → compra igual",
+        ],
+        "porcentaje": [
+            k["cambia_marca_si_falta_marca"],
+            k["cambia_marca_para_conservar_tono"],
+            k["compra_sin_promocion"],
+        ],
+    })
+    substitution_view["valor"] = substitution_view["porcentaje"].map(lambda x: f"{x:.1f}%")
+
+    fig_sub = px.bar(
+        substitution_view,
+        x="porcentaje",
+        y="situacion",
+        orientation="h",
+        text="valor",
+        title="Respuesta ante ausencia de marca, tono o promoción",
+        labels={"porcentaje": "Porcentaje", "situacion": ""},
+    )
+    fig_sub.update_traces(textposition="inside", insidetextanchor="end", textfont_size=14)
+    fig_sub.update_layout(
+        yaxis={"categoryorder":"array", "categoryarray":substitution_view["situacion"].tolist()[::-1]},
+        xaxis_range=[0, 100],
+        showlegend=False,
+    )
+    polish_bar(fig_sub, height=330, percent_axis=True)
+    st.plotly_chart(fig_sub, use_container_width=True)
 
     if is_tendential:
         stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
