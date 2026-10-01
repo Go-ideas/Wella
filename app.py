@@ -2738,19 +2738,81 @@ elif page == "Qué pesa más":
             labels={"valor": "Score de importancia", "driver": "", "serie": ""},
         )
         fig.update_traces(textposition="outside", cliponaxis=False)
+
+        # En comparación, destacar directamente en el gráfico las mayores brechas.
+        # Se marcan máximo 3 para mantener una lectura limpia.
+        if compare_mode != reading_label:
+            gap_view = comp.copy()
+            gap_view["abs_delta"] = gap_view["delta_actual"].abs()
+            gap_view = gap_view[gap_view["abs_delta"] >= 0.5].nlargest(3, "abs_delta")
+
+            if len(gap_view):
+                max_score = float(max(comp["actual"].max(), comp["benchmark"].max()))
+                gap_x = max_score + max(0.8, max_score * 0.07)
+
+                for _, gap_row in gap_view.iterrows():
+                    delta = float(gap_row["delta_actual"])
+                    is_up = delta > 0
+                    fig.add_annotation(
+                        x=gap_x,
+                        y=str(gap_row["driver"]),
+                        text=f"<b>{'▲' if is_up else '▼'} {delta:+.1f}</b>",
+                        showarrow=False,
+                        xanchor="left",
+                        yanchor="middle",
+                        bgcolor="#EAF7F0" if is_up else "#FFF1F2",
+                        bordercolor="#B9DFC9" if is_up else "#F0C6CC",
+                        borderwidth=1,
+                        borderpad=4,
+                        font=dict(
+                            size=11,
+                            color="#237A4B" if is_up else "#A53D4A",
+                        ),
+                    )
+
+                fig.add_annotation(
+                    x=1,
+                    y=1.075,
+                    xref="paper",
+                    yref="paper",
+                    text="<b>▲ Sobreíndice</b> &nbsp;&nbsp; <b>▼ Bajo índice</b>",
+                    showarrow=False,
+                    xanchor="right",
+                    font=dict(size=10, color="#718096"),
+                )
+
+        x_max = float(max(comp["actual"].max(), comp["benchmark"].max()))
+        if compare_mode != reading_label and (comp["delta_actual"].abs() >= 0.5).any():
+            x_max = x_max + max(2.2, x_max * 0.18)
+        else:
+            x_max = x_max + max(1.0, x_max * 0.08)
+
         fig.update_layout(
             yaxis=dict(
                 categoryorder="array",
                 categoryarray=list(reversed(order)),
             ),
+            xaxis=dict(range=[0, x_max]),
             legend_title_text="",
-            margin=dict(l=10, r=70, t=18, b=28),
+            margin=dict(l=10, r=100, t=32, b=28),
             height=max(470, 72 + len(comp) * 42),
             plot_bgcolor="white",
             paper_bgcolor="white",
         )
         fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False)
         st.plotly_chart(fig, use_container_width=True)
+
+        if compare_mode != reading_label:
+            relevant_gaps = comp[comp["delta_actual"].abs() >= 0.5]
+            if len(relevant_gaps):
+                st.caption(
+                    "Las etiquetas ▲/▼ señalan las 3 mayores diferencias frente al "
+                    f"{benchmark_label.lower()}. El valor indica la brecha en puntos de score."
+                )
+            else:
+                st.caption(
+                    f"No hay brechas de al menos 0.5 puntos frente al {benchmark_label.lower()} en la selección actual."
+                )
 
     if len(comp):
         biggest_up = comp.sort_values("delta_actual", ascending=False).iloc[0]
