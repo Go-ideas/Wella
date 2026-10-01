@@ -46,23 +46,25 @@ st.markdown(
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
-.hero {padding: 15px 18px; border-radius: 16px; background: linear-gradient(135deg,#071A33,#123C66); color:white; margin-bottom:10px;}
-.hero h2 {margin:0; font-size:1.55rem;}
-.hero p {margin:4px 0 0 0; opacity:.88;}
+.hero {padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg,#071A33,#123C66); color:white; margin-bottom:12px;}
+.hero h2 {margin:0; font-size:1.65rem;}
+.hero p {margin:6px 0 0 0; opacity:.90; font-size:1rem;}
 .secure {padding:10px 14px; border:1px solid #C7D7EA; background:#F6FAFF; border-radius:12px; margin:.3rem 0 .8rem 0;}
+[data-testid="stMetricValue"] {font-size:1.65rem;}
+[data-testid="stMetricLabel"] {font-weight:600;}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="hero"><h2>Wella · Decision Simulator</h2>'
-    '<p>El sitio no contiene datos del estudio. El cliente carga un archivo cifrado y el análisis se procesa en memoria durante su sesión.</p></div>',
+    '<div class="hero"><h2>Wella · Explorador de decisión de compra</h2>'
+    '<p>Carga el archivo seguro y explora cómo deciden los compradores, qué pesa más en la elección y qué pasa cuando una opción no está disponible.</p></div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="secure"><b>Privacidad por diseño:</b> no existe base precargada, no se incluye información en GitHub y no se escribe la base descifrada al disco del servidor.</div>',
+    '<div class="secure"><b>Tu información permanece separada del sitio:</b> el reporteador no trae una base precargada. Los resultados aparecen únicamente después de cargar el archivo seguro del estudio.</div>',
     unsafe_allow_html=True,
 )
 
@@ -74,17 +76,38 @@ def clear_loaded_data() -> None:
     gc.collect()
 
 
+def polish_bar(fig, height=480, percent_axis=False):
+    """Ajustes visuales comunes para gráficos de barras."""
+    fig.update_traces(textfont_size=13, cliponaxis=False, marker_line_width=0)
+    fig.update_layout(
+        height=height,
+        margin=dict(l=10, r=55, t=70, b=25),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(size=13),
+        legend_title_text="",
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="#E8EDF3",
+            zeroline=False,
+            ticksuffix="%" if percent_axis else "",
+        ),
+        yaxis=dict(title=""),
+    )
+    return fig
+
+
 uploaded = st.file_uploader(
-    "1. Carga el archivo cifrado del estudio (.goideas)",
+    "1. Carga el archivo seguro del estudio (.goideas)",
     type=["goideas"],
-    help="El archivo debe haber sido generado por Go Ideas. El sitio no acepta bases .db/.sav en claro.",
+    help="Usa el archivo .goideas entregado por Go Ideas. El sitio no acepta bases originales en claro.",
 )
 
 if uploaded is None:
     if "dataset" in st.session_state:
         clear_loaded_data()
-    st.info("Carga el archivo **.goideas** entregado por Go Ideas. Sin ese archivo, el reporteador no contiene ni puede reconstruir datos del estudio.")
-    st.caption("Streamlit recibe el archivo en el backend durante la sesión. El paquete viaja cifrado; la clave se introduce por separado y la base se descifra únicamente en memoria.")
+    st.info("Para comenzar, carga el archivo **.goideas** entregado por Go Ideas. Sin ese archivo no se muestran resultados.")
+    st.caption("El archivo está protegido y se abre únicamente durante tu sesión.")
     st.stop()
 
 package_bytes = uploaded.getvalue()
@@ -144,7 +167,7 @@ with st.sidebar:
         clear_loaded_data()
         st.rerun()
     st.divider()
-    st.markdown("### Filtros")
+    st.markdown("### Filtra la lectura")
 
 filters = {}
 filter_labels = {
@@ -163,7 +186,7 @@ for col in FILTER_COLUMNS:
 filtered = apply_filters(df, filters)
 n = len(filtered)
 quality, quality_note = base_quality(n)
-st.sidebar.markdown(f"**Base actual:** n={n}")
+st.sidebar.markdown(f"**Entrevistas en esta lectura:** {n}")
 st.sidebar.caption(f"{quality} · {quality_note}")
 
 if n == 0:
@@ -185,9 +208,9 @@ if tendential_available:
         "Tipo de lectura",
         ["Tendencial", "Observada"],
         index=default_index,
-        help="Tendencial estabiliza la lectura de bases pequeñas usando el patrón de referencia de la categoría, sin crear entrevistas adicionales.",
+        help="La lectura tendencial ayuda a interpretar productos con pocas entrevistas apoyándose en el comportamiento de la categoría. No crea entrevistas nuevas.",
     )
-    st.sidebar.caption("Tendencial = estimación estabilizada; Observada = dato directo de la muestra.")
+    st.sidebar.caption("Observada = respuesta directa. Tendencial = lectura apoyada en el patrón de la categoría cuando la base es pequeña.")
 elif n < 30:
     st.error("Base menor a 30. Para habilitar lectura tendencial selecciona un solo producto con al menos 10 entrevistas.")
     st.stop()
@@ -201,53 +224,79 @@ is_tendential = reading_mode == "Tendencial" and reference is not None and len(r
 if is_tendential:
     st.info(
         f"**Lectura tendencial · base real n={n}.** "
-        "La estimación combina la evidencia del producto con el patrón de referencia de la categoría mediante regularización estadística. "
-        "No crea entrevistas ni convierte la base en una muestra mayor."
+        "Esta lectura conserva lo observado en el producto y lo contrasta con el patrón de la categoría para evitar cambios exagerados por una base pequeña. "
+        "La base real sigue siendo la misma."
     )
 
 page = st.radio(
-    "Vista",
-    ["Resumen", "Árbol de decisión", "Drivers MaxDiff", "Simulador de sustitución", "Anaquel"],
+    "¿Qué quieres explorar?",
+    ["Resumen", "Cómo se decide", "Qué pesa más", "Qué pasa si falta...", "Cómo ordenar el anaquel"],
     horizontal=True,
 )
 
 if page == "Resumen":
+    st.markdown("### Resumen de la compra")
+    st.caption("Una lectura rápida de cómo se toma la decisión y qué tan fácil es cambiar de opción.")
     k = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
+
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Base", f"{n}", quality)
-    c2.metric("Valida el árbol", f"{k['validacion_arbol']:.1f}%")
-    c3.metric("Primer gate", k["primer_gate"] or "—")
-    c4.metric("Top driver MaxDiff", k["top_driver"] or "—")
+    c1.metric("Entrevistas analizadas", f"{n}", quality)
+    c2.metric("La secuencia describe su compra", f"{k['validacion_arbol']:.1f}%")
+    c3.metric("Lo primero que se decide", k["primer_gate"] or "—")
+    c4.metric("Lo que más pesa al elegir", k["top_driver"] or "—")
+
     c5, c6, c7 = st.columns(3)
-    c5.metric("Cambia de marca si falta su marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
-    c6.metric("Cambia de marca para conservar tono", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
-    c7.metric("Compra aun sin promoción", f"{k['compra_sin_promocion']:.1f}%")
+    c5.metric("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
+    c6.metric("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
+    c7.metric("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
 
     if is_tendential:
-        stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "pct"})
+        stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
     else:
-        stage = decision_stage_summary(filtered)
+        stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
+    stage["valor"] = stage["porcentaje"].map(lambda x: f"{x:.1f}%")
+
     fig = px.bar(
         stage,
-        x="pct",
+        x="porcentaje",
         y="criterio",
         color="etapa",
         barmode="group",
         orientation="h",
-        labels={"pct": "%", "criterio": "Criterio", "etapa": "Etapa"},
-        title="Qué entra primero, después y al cierre",
+        text="valor",
+        labels={"porcentaje": "Porcentaje", "criterio": "", "etapa": "Momento"},
+        title="Qué se toma en cuenta en cada momento de la compra",
     )
-    fig.update_layout(height=520, legend_title_text="", yaxis={"categoryorder": "total ascending"})
+    fig.update_traces(textposition="outside")
+    fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    polish_bar(fig, height=560, percent_axis=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    routes = top_routes(filtered, 8)
-    st.markdown("#### Rutas más frecuentes")
-    st.dataframe(routes.style.format({"pct": "{:.1f}%"}), use_container_width=True, hide_index=True)
+    routes = top_routes(filtered, 8).rename(
+        columns={"ruta": "Ruta de decisión", "n": "Entrevistas", "pct": "Porcentaje"}
+    )
+    st.markdown("#### Las rutas de decisión más frecuentes")
+    st.caption("Muestran las combinaciones que realmente aparecieron en las entrevistas.")
+    st.dataframe(
+        routes.style.format({"Porcentaje": "{:.1f}%"}),
+        use_container_width=True,
+        hide_index=True,
+    )
 
-elif page == "Árbol de decisión":
+elif page == "Cómo se decide":
+    st.markdown("### Cómo se decide la compra")
+    st.caption("Lee el recorrido de izquierda a derecha: primero qué se decide, después qué se compara y al final qué termina definiendo la compra.")
+
     choices = ["Todos"] + options_for(filtered, "decision_1")
-    sel = st.selectbox("Explorar desde el primer criterio", choices, index=0)
-    depth = st.slider("Detalle de ramas", 2, 6, 4, help="Controla cuántas ramas se muestran para mantener el árbol legible.")
+    sel = st.selectbox("Quiero ver el recorrido que empieza por:", choices, index=0)
+    depth = st.slider(
+        "Cuántas ramas mostrar",
+        2,
+        6,
+        4,
+        help="Menos ramas hacen el gráfico más simple; más ramas muestran mayor detalle.",
+    )
+
     if is_tendential:
         links = tree_links_tendential(
             filtered,
@@ -259,13 +308,27 @@ elif page == "Árbol de decisión":
         )
     else:
         links = tree_links(filtered, None if sel == "Todos" else sel, top_d2=depth, top_d3=max(2, depth - 1))
+
     if not links["labels"]:
-        st.warning("No hay datos para esa ruta.")
+        st.warning("No hay información suficiente para mostrar este recorrido.")
     else:
+        root_total = sum(v for src, v in zip(links["source"], links["value"]) if src == 0) or float(n)
+        incoming = [0.0] * len(links["labels"])
+        for tgt, val in zip(links["target"], links["value"]):
+            incoming[tgt] += float(val)
+
+        display_labels = []
+        for idx, label in enumerate(links["labels"]):
+            if idx == 0:
+                display_labels.append(f"Compra<br>Base {n}")
+            else:
+                share = incoming[idx] / root_total * 100 if root_total else 0
+                display_labels.append(f"{label}<br>{share:.1f}%")
+
         fig = go.Figure(
             go.Sankey(
                 arrangement="snap",
-                node=dict(label=links["labels"], pad=18, thickness=18),
+                node=dict(label=display_labels, pad=22, thickness=20),
                 link=dict(
                     source=links["source"],
                     target=links["target"],
@@ -275,147 +338,220 @@ elif page == "Árbol de decisión":
                 ),
             )
         )
-        fig.update_layout(title="Árbol dinámico D1 → D2 → D3", height=690, font_size=12)
+        fig.update_layout(
+            title="Ruta de decisión de compra",
+            height=720,
+            font_size=13,
+            margin=dict(l=10, r=10, t=65, b=15),
+        )
         st.plotly_chart(fig, use_container_width=True)
-        if is_tendential:
-            st.caption("Árbol tendencial: las ramas se estabilizan contra el patrón de referencia de la categoría. Los porcentajes siguen siendo condicionales a la rama anterior.")
-        else:
-            st.caption("Los porcentajes del árbol son condicionales a la rama anterior; no representan causalidad.")
-    st.markdown("#### Top rutas completas observadas")
-    route_table = top_routes(filtered, 12).rename(columns={"pct": "Porcentaje"})
-    st.dataframe(route_table.style.format({"Porcentaje": "{:.1f}%"}), use_container_width=True, hide_index=True)
 
-elif page == "Drivers MaxDiff":
+        if is_tendential:
+            st.caption("Los porcentajes visibles corresponden a la lectura tendencial. Al pasar el cursor sobre una rama verás el detalle de esa transición.")
+        else:
+            st.caption("Los porcentajes visibles muestran qué parte de la base sigue cada camino. Al pasar el cursor sobre una rama verás el detalle de esa transición.")
+
+    st.markdown("#### Rutas observadas en la base")
+    route_table = top_routes(filtered, 12).rename(
+        columns={"ruta": "Ruta de decisión", "n": "Entrevistas", "pct": "Porcentaje"}
+    )
+    st.dataframe(
+        route_table.style.format({"Porcentaje": "{:.1f}%"}),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+elif page == "Qué pesa más":
+    st.markdown("### Qué pesa más al elegir")
+    st.caption("Entre más alto es el valor, mayor peso tiene ese factor en la elección del producto.")
+
     if is_tendential:
         comp = maxdiff_tendential(filtered, reference)
         plot = comp.melt(
             id_vars=["driver"],
             value_vars=["tendencial", "referencia"],
             var_name="serie",
-            value_name="score",
+            value_name="valor",
         )
-        plot["serie"] = plot["serie"].map({"tendencial": "Tendencial", "referencia": "Referencia categoría"})
+        plot["serie"] = plot["serie"].map({"tendencial": "Producto · tendencial", "referencia": "Categoría"})
+        plot["etiqueta"] = plot["valor"].map(lambda x: f"{x:.1f}")
+
         fig = px.bar(
             plot,
-            x="score",
+            x="valor",
             y="driver",
             color="serie",
             barmode="group",
             orientation="h",
-            title="Importancia MaxDiff · lectura tendencial",
+            text="etiqueta",
+            title="Factores que más influyen en la elección",
+            labels={"valor": "Importancia", "driver": "", "serie": ""},
         )
-        fig.update_layout(height=560, yaxis={"categoryorder":"total ascending"}, legend_title_text="")
+        fig.update_traces(textposition="outside")
+        fig.update_layout(yaxis={"categoryorder": "total ascending"})
+        polish_bar(fig, height=600)
         st.plotly_chart(fig, use_container_width=True)
+
         table = comp[["driver", "observado", "tendencial", "referencia", "delta_vs_referencia"]].rename(
             columns={
-                "driver": "Driver",
-                "observado": "Observado",
-                "tendencial": "Tendencial",
-                "referencia": "Referencia categoría",
-                "delta_vs_referencia": "Diferencia vs referencia",
+                "driver": "Factor",
+                "observado": "Dato observado",
+                "tendencial": "Lectura tendencial",
+                "referencia": "Categoría",
+                "delta_vs_referencia": "Diferencia vs categoría",
             }
         )
         st.dataframe(
             table.style.format({
-                "Observado": "{:.2f}",
-                "Tendencial": "{:.2f}",
-                "Referencia categoría": "{:.2f}",
-                "Diferencia vs referencia": "{:+.2f}",
+                "Dato observado": "{:.1f}",
+                "Lectura tendencial": "{:.1f}",
+                "Categoría": "{:.1f}",
+                "Diferencia vs categoría": "{:+.1f}",
             }),
             use_container_width=True,
             hide_index=True,
         )
-        st.caption("La lectura tendencial conserva la señal del producto y reduce volatilidad apoyándose en la referencia de categoría. No incrementa la base real.")
+        st.caption("La lectura tendencial conserva la señal del producto y la hace menos volátil cuando hay pocas entrevistas.")
     else:
         comp = maxdiff_compare(filtered, df)
-        show_total = st.toggle("Comparar contra total", value=True)
+        show_total = st.toggle("Comparar con el total", value=True)
+
         if show_total:
-            plot = comp.melt(id_vars=["driver"], value_vars=["segmento", "total"], var_name="serie", value_name="score")
-            plot["serie"] = plot["serie"].map({"segmento": "Segmento filtrado", "total": "Total"})
-            fig = px.bar(plot, x="score", y="driver", color="serie", barmode="group", orientation="h", title="Importancia MaxDiff")
+            plot = comp.melt(
+                id_vars=["driver"],
+                value_vars=["segmento", "total"],
+                var_name="serie",
+                value_name="valor",
+            )
+            plot["serie"] = plot["serie"].map({"segmento": "Selección actual", "total": "Total"})
         else:
-            fig = px.bar(comp, x="segmento", y="driver", orientation="h", title="Importancia MaxDiff del segmento")
-        fig.update_layout(height=560, yaxis={"categoryorder":"total ascending"}, legend_title_text="")
+            plot = comp[["driver", "segmento"]].rename(columns={"segmento": "valor"})
+            plot["serie"] = "Selección actual"
+
+        plot["etiqueta"] = plot["valor"].map(lambda x: f"{x:.1f}")
+        fig = px.bar(
+            plot,
+            x="valor",
+            y="driver",
+            color="serie",
+            barmode="group",
+            orientation="h",
+            text="etiqueta",
+            title="Factores que más influyen en la elección",
+            labels={"valor": "Importancia", "driver": "", "serie": ""},
+        )
+        fig.update_traces(textposition="outside")
+        fig.update_layout(yaxis={"categoryorder": "total ascending"})
+        polish_bar(fig, height=600)
         st.plotly_chart(fig, use_container_width=True)
+
         table = comp[["driver", "segmento", "total", "delta"]].rename(
-            columns={"driver": "Driver", "segmento": "Segmento", "total": "Total", "delta": "Diferencia"}
+            columns={
+                "driver": "Factor",
+                "segmento": "Selección actual",
+                "total": "Total",
+                "delta": "Diferencia",
+            }
         )
         st.dataframe(
-            table.style.format({"Segmento": "{:.2f}", "Total": "{:.2f}", "Diferencia": "{:+.2f}"}),
+            table.style.format({"Selección actual": "{:.1f}", "Total": "{:.1f}", "Diferencia": "{:+.1f}"}),
             use_container_width=True,
             hide_index=True,
         )
-        st.caption("Los scores son utilidades HB reescaladas; describen importancia relativa dentro del conjunto de atributos evaluados.")
+        st.caption("El valor sirve para comparar la importancia relativa de los factores: un número mayor significa que ese factor pesa más.")
 
-elif page == "Simulador de sustitución":
+elif page == "Qué pasa si falta...":
+    st.markdown("### Qué pasa cuando algo no está disponible")
+    st.caption("Explora qué harían los compradores si no encuentran la marca, el tono o la promoción que esperaban.")
+
     if is_tendential:
         k = tendential_kpis(filtered, reference)
     else:
         k = substitution_kpis(filtered)
-    a, b, c = st.columns(3)
-    a.metric("Riesgo de cambio de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%", help="Declara comprar otra marca si la marca buscada no está disponible.")
-    b.metric("Tono domina a marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%", help="Declara cambiar de marca para conservar el tono deseado.")
-    c.metric("Resistencia a perder promoción", f"{k['compra_sin_promocion']:.1f}%", help="Declara comprar de todos modos sin promoción.")
 
-    scenario = st.selectbox("Escenario", ["Marca no disponible", "Tono/color no disponible", "Sin promoción"])
-    sim_n = st.slider("Compradores hipotéticos", 100, 5000, 1000, 100)
+    a, b, c = st.columns(3)
+    a.metric("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
+    b.metric("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
+    c.metric("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
+
+    scenario = st.selectbox(
+        "Quiero probar qué pasa cuando:",
+        ["Marca no disponible", "Tono/color no disponible", "Sin promoción"],
+    )
+    sim_n = st.slider("Número de compradores para visualizar", 100, 5000, 1000, 100)
+
     if is_tendential:
         t = substitution_tendential(filtered, reference, scenario).copy()
         t["esperados"] = (t["tendencial"] * sim_n / 100).round().astype(int)
+        t["etiqueta"] = t.apply(lambda r: f"{r['tendencial']:.1f}% · {int(r['esperados'])}", axis=1)
         fig = px.bar(
             t,
             x="tendencial",
             y="respuesta",
             orientation="h",
-            text="esperados",
-            title=f"Qué harían {sim_n:,} compradores según la lectura tendencial",
-            labels={"tendencial": "Porcentaje tendencial", "respuesta": "Respuesta"},
+            text="etiqueta",
+            title="Qué harían los compradores",
+            labels={"tendencial": "Porcentaje", "respuesta": ""},
         )
     else:
-        t = scenario_counts(filtered, scenario, sim_n)
+        t = scenario_counts(filtered, scenario, sim_n).copy()
+        t["etiqueta"] = t.apply(lambda r: f"{r['pct']:.1f}% · {int(r['esperados'])}", axis=1)
         fig = px.bar(
             t,
             x="pct",
             y="respuesta",
             orientation="h",
-            text="esperados",
-            title=f"Qué harían {sim_n:,} compradores con el patrón observado",
-            labels={"pct": "Porcentaje observado", "respuesta": "Respuesta"},
+            text="etiqueta",
+            title="Qué harían los compradores",
+            labels={"pct": "Porcentaje", "respuesta": ""},
         )
-    fig.update_traces(texttemplate="%{text} compradores", textposition="outside")
-    fig.update_layout(height=470, yaxis={"categoryorder":"total ascending"})
-    st.plotly_chart(fig, use_container_width=True)
-    st.caption("La simulación escala el patrón seleccionado a un número hipotético de compradores. No es un pronóstico causal de ventas.")
 
-elif page == "Anaquel":
+    fig.update_traces(textposition="outside")
+    fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    polish_bar(fig, height=500, percent_axis=True)
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Ejemplo: “42.0% · 420” significa que 42% seguiría esa opción, equivalente a 420 de cada 1,000 compradores en la visualización. No es un pronóstico de ventas.")
+
+elif page == "Cómo ordenar el anaquel":
+    st.markdown("### Cómo facilitar la compra en anaquel")
+    st.caption("Muestra qué forma de organizar el anaquel ayuda más a encontrar rápidamente el producto.")
+
     if is_tendential:
         priority = shelf_priority_tendential(filtered, reference)
+        priority["etiqueta"] = priority["indice_tendencial"].map(lambda x: f"{x:.1f}")
         fig = px.bar(
             priority,
             x="indice_tendencial",
             y="organizacion",
             orientation="h",
-            title="Prioridad tendencial para organizar/encontrar producto",
-            labels={"indice_tendencial": "Índice tendencial 2:1", "organizacion": ""},
+            text="etiqueta",
+            title="Qué organización ayuda más",
+            labels={"indice_tendencial": "Prioridad", "organizacion": ""},
         )
     else:
         priority = shelf_priority(filtered)
+        priority["etiqueta"] = priority["indice_prioridad"].map(lambda x: f"{x:.1f}")
         fig = px.bar(
             priority,
             x="indice_prioridad",
             y="organizacion",
             orientation="h",
-            title="Prioridad declarada para organizar/encontrar producto",
-            labels={"indice_prioridad": "Índice 2:1 (primera vs segunda ayuda)", "organizacion": ""},
+            text="etiqueta",
+            title="Qué organización ayuda más",
+            labels={"indice_prioridad": "Prioridad", "organizacion": ""},
         )
-    fig.update_layout(height=460, yaxis={"categoryorder":"total ascending"})
+
+    fig.update_traces(textposition="outside")
+    fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    polish_bar(fig, height=500)
     st.plotly_chart(fig, use_container_width=True)
+    st.caption("El valor combina lo que las personas mencionaron como primera y segunda ayuda. Más alto = mayor prioridad.")
 
     opts = priority["organizacion"].tolist()
     left, right = st.columns(2)
-    primary = left.selectbox("Organización principal", opts, index=0)
+    primary = left.selectbox("Primero organizar por:", opts, index=0)
     sec_opts = [x for x in opts if x != primary]
-    secondary = right.selectbox("Organización secundaria", sec_opts, index=0)
+    secondary = right.selectbox("Después organizar por:", sec_opts, index=0)
 
     if is_tendential:
         pair = shelf_pair_tendential(filtered, reference, primary, secondary)
@@ -426,37 +562,47 @@ elif page == "Anaquel":
         easy_value, barriers = friction_summary(filtered)
 
     x, y, z = st.columns(3)
-    x.metric("Coincidencia exacta", f"{pair['exact_order']:.1f}%")
-    y.metric("Par en Top 2", f"{pair['top2_any_order']:.1f}%")
-    z.metric("Cobertura del par", f"{pair['coverage']:.1f}%")
-    st.markdown(f"**{easy_value:.1f}%** declara/estima que encontrar el producto es fácil o muy fácil.")
+    x.metric("Coincide exactamente con esta combinación", f"{pair['exact_order']:.1f}%")
+    y.metric("Estas dos opciones aparecen entre las 2 principales", f"{pair['top2_any_order']:.1f}%")
+    z.metric("Al menos una de las dos ayuda", f"{pair['coverage']:.1f}%")
+
+    st.markdown(f"**{easy_value:.1f}%** encontró el producto fácil o muy fácil.")
 
     if len(barriers):
         if is_tendential:
+            barriers = barriers.copy()
+            barriers["etiqueta"] = barriers["tendencial"].map(lambda x: f"{x:.1f}%")
             fig2 = px.bar(
                 barriers,
                 x="tendencial",
                 y="barrera",
                 orientation="h",
-                title="Barreras · lectura tendencial",
-                labels={"tendencial": "Porcentaje tendencial", "barrera": "Barrera"},
+                text="etiqueta",
+                title="Qué dificulta encontrar el producto",
+                labels={"tendencial": "Porcentaje", "barrera": ""},
             )
         else:
+            barriers = barriers.copy()
+            barriers["etiqueta"] = barriers["pct"].map(lambda x: f"{x:.1f}%")
             fig2 = px.bar(
                 barriers,
                 x="pct",
                 y="barrera",
                 orientation="h",
-                title="Barreras entre quienes no tuvieron una experiencia claramente fácil",
-                labels={"pct": "Porcentaje", "barrera": "Barrera"},
+                text="etiqueta",
+                title="Qué dificulta encontrar el producto",
+                labels={"pct": "Porcentaje", "barrera": ""},
             )
-        fig2.update_layout(height=380, yaxis={"categoryorder":"total ascending"})
+        fig2.update_traces(textposition="outside")
+        fig2.update_layout(yaxis={"categoryorder": "total ascending"})
+        polish_bar(fig2, height=420, percent_axis=True)
         st.plotly_chart(fig2, use_container_width=True)
-    st.caption("El simulador de anaquel mide afinidad declarada con formas de organización; no estima incremento causal de ventas.")
+
+    st.caption("Esta lectura ayuda a comparar formas de organizar el anaquel. No estima un incremento directo de ventas.")
 
 
 st.divider()
 st.caption(
     f"{meta.get('project_name', 'Proyecto')} · Lectura {reading_mode.lower()} · "
-    f"Base real n={n} · Datos descifrados y procesados únicamente en memoria de sesión."
+    f"Base real: {n} entrevistas · Archivo procesado únicamente durante esta sesión."
 )
