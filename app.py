@@ -37,6 +37,7 @@ from tendential import (
     shelf_priority_tendential,
     shelf_pair_tendential,
     friction_tendential,
+    probabilistic_routes,
 )
 
 st.set_page_config(page_title="Wella | Decision Simulator", page_icon="🎯", layout="wide")
@@ -476,30 +477,38 @@ if page == "Resumen":
     polish_bar(fig, height=560, percent_axis=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    routes2 = two_step_routes(filtered, 8)
-    st.markdown("#### Los recorridos más claros al iniciar la compra")
+    route_reference = reference if is_tendential else filtered
+    prob_routes = probabilistic_routes(filtered, route_reference, top_n=10)
+
+    st.markdown("#### Rutas con mayor probabilidad de ocurrir")
     st.caption(
-        "Aquí agrupamos sólo los dos primeros pasos. Así evitamos fragmentar la muestra en cientos de combinaciones de tres pasos."
+        "En lugar de contar sólo combinaciones exactas, estimamos la probabilidad de cada recorrido a partir de las transiciones entre decisiones."
     )
-    if len(routes2):
-        routes2["etiqueta"] = routes2.apply(
-            lambda r: f"{int(r['entrevistas'])} entrevistas · {r['porcentaje_dentro_inicio']:.1f}%",
+
+    if len(prob_routes):
+        top5_reach = float(prob_routes.head(5)["probabilidad"].sum())
+        st.markdown(
+            f"**Las 5 rutas principales concentran aproximadamente {top5_reach:.1f}% del alcance estimado.**"
+        )
+
+        prob_routes["etiqueta"] = prob_routes.apply(
+            lambda r: f"{r['probabilidad']:.1f}% · {int(r['alcance_por_1000'])} de cada 1,000",
             axis=1,
         )
         fig_routes = px.bar(
-            routes2.sort_values("entrevistas"),
-            x="porcentaje_dentro_inicio",
+            prob_routes.sort_values("probabilidad"),
+            x="probabilidad",
             y="ruta",
             orientation="h",
             text="etiqueta",
-            title="Qué suele venir después del primer criterio",
-            labels={"porcentaje_dentro_inicio": "% dentro de quienes empiezan por ese criterio", "ruta": ""},
+            title="Alcance estimado de las rutas de decisión",
+            labels={"probabilidad": "Probabilidad estimada", "ruta": ""},
         )
         fig_routes.update_traces(textposition="outside")
-        polish_bar(fig_routes, height=470, percent_axis=True)
+        polish_bar(fig_routes, height=540, percent_axis=True)
         st.plotly_chart(fig_routes, use_container_width=True)
         st.caption(
-            "Ejemplo: si una ruta marca 20%, significa que 20% de quienes comenzaron por ese primer criterio siguieron por el segundo."
+            "El porcentaje es una estimación probabilística del recorrido. “40 de cada 1,000” significa que esa ruta tendría un alcance esperado cercano a 40 compradores por cada 1,000 con un patrón similar."
         )
 
 elif page == "Cómo se decide":
@@ -516,17 +525,15 @@ elif page == "Cómo se decide":
         help="Menos ramas hacen el gráfico más simple; más ramas muestran mayor detalle.",
     )
 
-    if is_tendential:
-        links = tree_links_tendential(
-            filtered,
-            reference,
-            None if sel == "Todos" else sel,
-            top_d1=5,
-            top_d2=depth,
-            top_d3=max(2, depth - 1),
-        )
-    else:
-        links = tree_links(filtered, None if sel == "Todos" else sel, top_d2=depth, top_d3=max(2, depth - 1))
+    probability_reference = reference if is_tendential else filtered
+    links = tree_links_tendential(
+        filtered,
+        probability_reference,
+        None if sel == "Todos" else sel,
+        top_d1=5,
+        top_d2=depth,
+        top_d3=max(2, depth - 1),
+    )
 
     if not links["labels"]:
         st.warning("No hay información suficiente para mostrar este recorrido.")
@@ -565,20 +572,30 @@ elif page == "Cómo se decide":
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        if is_tendential:
-            st.caption("Los porcentajes visibles corresponden a la lectura tendencial. Al pasar el cursor sobre una rama verás el detalle de esa transición.")
-        else:
-            st.caption("Los porcentajes visibles muestran qué parte de la base sigue cada camino. Al pasar el cursor sobre una rama verás el detalle de esa transición.")
+        st.caption(
+            "El tamaño de cada rama representa una probabilidad estimada de transición entre decisiones. No depende únicamente de contar rutas exactas."
+        )
 
-    st.markdown("#### Rutas observadas en la base")
-    route_table = top_routes(filtered, 12).rename(
-        columns={"ruta": "Ruta de decisión", "n": "Entrevistas", "pct": "Porcentaje"}
-    )
-    st.dataframe(
-        route_table.style.format({"Porcentaje": "{:.1f}%"}),
-        use_container_width=True,
-        hide_index=True,
-    )
+    st.markdown("#### Rutas con mayor alcance estimado")
+    probability_reference = reference if is_tendential else filtered
+    route_table = probabilistic_routes(filtered, probability_reference, top_n=12).copy()
+    if len(route_table):
+        route_table = route_table[["ruta", "probabilidad", "alcance_por_1000", "prob_acumulada"]].rename(
+            columns={
+                "ruta": "Ruta de decisión",
+                "probabilidad": "Probabilidad estimada",
+                "alcance_por_1000": "Alcance por cada 1,000",
+                "prob_acumulada": "Alcance acumulado",
+            }
+        )
+        st.dataframe(
+            route_table.style.format({
+                "Probabilidad estimada": "{:.1f}%",
+                "Alcance acumulado": "{:.1f}%",
+            }),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 elif page == "Qué pesa más":
     st.markdown("### Qué pesa más al elegir")
