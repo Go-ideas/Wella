@@ -45,6 +45,11 @@ st.set_page_config(page_title="Wella | Decision Simulator", page_icon="🎯", la
 st.markdown(
     """
 <style>
+#MainMenu {visibility:hidden;}
+footer {visibility:hidden;}
+[data-testid="stToolbar"] {display:none !important;}
+[data-testid="stDecoration"] {display:none !important;}
+[data-testid="stStatusWidget"] {visibility:hidden;}
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
@@ -96,19 +101,6 @@ st.markdown(
     line-height:1.4;
 }
 .secure {padding:10px 14px; border:1px solid #C7D7EA; background:#F6FAFF; border-radius:12px; margin:.3rem 0 .8rem 0;}
-.fidelity-pill {
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-    border-radius:999px;
-    padding:7px 12px;
-    background:#EAF6EE;
-    color:#22613E;
-    font-weight:800;
-    font-size:.82rem;
-    margin-left:auto;
-}
-.fidelity-dot {width:8px;height:8px;border-radius:50%;background:#2FA36B;display:inline-block;}
 [data-testid="stMetricValue"] {font-size:1.65rem;}
 [data-testid="stMetricLabel"] {font-weight:600;}
 .kpi-card {
@@ -428,14 +420,6 @@ st.markdown(
 .sub-icon {width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .sub-value {font-size:1.25rem;font-weight:800;color:#13395F;}
 .sub-label {font-size:.79rem;color:#304A63;line-height:1.25;}
-.fidelity-bar {
-    height:7px;
-    border-radius:999px;
-    background:#E6ECEF;
-    overflow:hidden;
-    width:110px;
-}
-.fidelity-fill {height:100%;background:linear-gradient(90deg,#3BA46D,#78C792);border-radius:999px;}
 @media (max-width: 1050px) {
     .summary-grid {grid-template-columns:1fr;}
     .brand-shell {grid-template-columns:130px minmax(0,1fr);}
@@ -482,7 +466,7 @@ st.markdown(
 )
 
 st.markdown(
-    '<div class="secure"><b>Tu información permanece separada del sitio:</b> el reporteador no trae una base precargada. Los resultados aparecen únicamente después de cargar el archivo seguro del estudio.</div>',
+    '<div class="secure"><b>Acceso al estudio:</b> los resultados se muestran únicamente después de cargar el archivo correspondiente y su clave de acceso.</div>',
     unsafe_allow_html=True,
 )
 
@@ -827,8 +811,7 @@ def decision_tree_figure(
             line=dict(width=width, color="rgba(70,105,140,0.38)"),
             hovertemplate=(
                 f"<b>{pct:.1f}%</b> dentro de esta rama"
-                f"<br>Base real: {base}"
-                f"<br>Lectura: {mode}<extra></extra>"
+                f"<br>Base de la rama: {base}<extra></extra>"
             ),
             showlegend=False,
         ))
@@ -863,7 +846,7 @@ def decision_tree_figure(
         add_edge(0.05, root_y, 1.0, d1["y"], d1["pct"], d1["base"], d1["mode"])
         node_x.append(1.0); node_y.append(d1["y"])
         node_text.append(f"<b>{_wrap_tree_label(d1['label'])}</b><br>{d1['pct']:.1f}%")
-        node_hover.append(f"Primero<br>{d1['pct']:.1f}%<br>Base real: {d1['base']}<br>{d1['mode']}")
+        node_hover.append(f"Primero<br>{d1['pct']:.1f}%<br>Base de la rama: {d1['base']}")
         node_size.append(26)
 
         for d2 in d1["children"]:
@@ -872,7 +855,7 @@ def decision_tree_figure(
             node_text.append(f"<b>{_wrap_tree_label(d2['label'])}</b><br>{d2['pct']:.1f}%")
             node_hover.append(
                 f"Después de {d1['label']}<br>{d2['pct']:.1f}%<br>"
-                f"Base real de la rama: {d2['base']}<br>{d2['mode']}"
+                f"Base de la rama: {d2['base']}"
             )
             node_size.append(22)
 
@@ -882,7 +865,7 @@ def decision_tree_figure(
                 node_text.append(f"<b>{_wrap_tree_label(d3['label'])}</b><br>{d3['pct']:.1f}%")
                 node_hover.append(
                     f"Cierre después de {d1['label']} → {d2['label']}<br>{d3['pct']:.1f}%<br>"
-                    f"Base real de la rama: {d3['base']}<br>{d3['mode']}"
+                    f"Base de la rama: {d3['base']}"
                 )
                 node_size.append(19)
 
@@ -1036,16 +1019,16 @@ def substitution_panel_html(k: dict) -> str:
 
 
 uploaded = st.file_uploader(
-    "1. Carga el archivo seguro del estudio (.goideas)",
+    "1. Carga el archivo del estudio",
     type=["goideas"],
-    help="Usa el archivo .goideas entregado por Go Ideas. El sitio no acepta bases originales en claro.",
+    help="Selecciona el archivo asignado a este estudio.",
 )
 
 if uploaded is None:
     if "dataset" in st.session_state:
         clear_loaded_data()
-    st.info("Para comenzar, carga el archivo **.goideas** entregado por Go Ideas. Sin ese archivo no se muestran resultados.")
-    st.caption("El archivo está protegido y se abre únicamente durante tu sesión.")
+    st.info("Para comenzar, carga el archivo del estudio y después introduce tu clave de acceso.")
+    st.caption("Los resultados estarán disponibles después de validar el acceso.")
     st.stop()
 
 package_bytes = uploaded.getvalue()
@@ -1059,15 +1042,15 @@ if "dataset" in st.session_state and st.session_state.get("package_fp") != fp:
 if "dataset" not in st.session_state:
     # Keep unlock controls outside a form so stale validation messages disappear
     # as soon as the user edits the password.
-    password = st.text_input("2. Clave del archivo", type="password", key="unlock_password")
-    unlock = st.button("Abrir reporteador", type="primary", use_container_width=True)
+    password = st.text_input("2. Clave de acceso", type="password", key="unlock_password")
+    unlock = st.button("Abrir estudio", type="primary", use_container_width=True)
 
     if not unlock:
-        st.caption("Introduce la clave entregada junto con este archivo y después selecciona **Abrir reporteador**.")
+        st.caption("Introduce tu clave y selecciona **Abrir estudio**.")
         st.stop()
 
     if len(password) < 10:
-        st.error("La clave debe contener al menos 10 caracteres.")
+        st.error("Revisa la clave de acceso.")
         st.stop()
 
     try:
@@ -1086,10 +1069,10 @@ if "dataset" not in st.session_state:
         st.session_state["loaded_name"] = uploaded.name
         st.rerun()
     except (EncryptedPackageError, InvalidDatabase) as exc:
-        st.error(str(exc))
+        st.error("No fue posible abrir el estudio. Revisa el archivo y la clave de acceso.")
         st.stop()
     except Exception:
-        st.error("No fue posible abrir el archivo. Verifica que sea el paquete correcto y vuelve a intentarlo.")
+        st.error("No fue posible abrir el estudio. Revisa el archivo y la clave de acceso.")
         st.stop()
 
 # From here on, only the analytical dataframe and metadata live in session memory.
@@ -1099,9 +1082,8 @@ df = st.session_state["dataset"]
 meta = st.session_state["metadata"]
 
 with st.sidebar:
-    st.success("Archivo seguro abierto")
-    st.caption(st.session_state.get("loaded_name", "Archivo cifrado"))
-    if st.button("Cerrar sesión y borrar datos de memoria", use_container_width=True):
+    st.success("Estudio abierto")
+        if st.button("Cerrar estudio", use_container_width=True):
         clear_loaded_data()
         st.rerun()
     st.divider()
@@ -1124,8 +1106,7 @@ for col in FILTER_COLUMNS:
 filtered = apply_filters(df, filters)
 n = len(filtered)
 quality, quality_note = base_quality(n)
-st.sidebar.markdown(f"**Entrevistas en esta lectura:** {n}")
-st.sidebar.caption(f"{quality} · {quality_note}")
+st.sidebar.markdown(f"**Base seleccionada:** {n} entrevistas")
 
 if n == 0:
     st.warning("La combinación de filtros no contiene entrevistas.")
@@ -1146,24 +1127,23 @@ if tendential_available:
         "Tipo de lectura",
         ["Tendencial", "Observada"],
         index=default_index,
-        help="La lectura tendencial ayuda a interpretar productos con pocas entrevistas apoyándose en el comportamiento de la categoría. No crea entrevistas nuevas.",
+        help="Úsala cuando la base del producto sea pequeña para obtener una lectura más estable.",
     )
-    st.sidebar.caption("Observada = respuesta directa. Tendencial = lectura apoyada en el patrón de la categoría cuando la base es pequeña.")
+    st.sidebar.caption("Observada = dato directo. Tendencial = lectura ajustada para bases pequeñas.")
 elif n < 30:
-    st.error("Base menor a 30. Para habilitar lectura tendencial selecciona un solo producto con al menos 10 entrevistas.")
+    st.error("La selección actual tiene pocos casos. Elige un solo producto para habilitar la lectura tendencial.")
     st.stop()
 
 if n < 10:
-    st.error("Base menor a 10. No se genera lectura individual.")
+    st.error("La selección actual no tiene suficientes entrevistas para mostrar resultados.")
     st.stop()
 
 is_tendential = reading_mode == "Tendencial" and reference is not None and len(reference) > 0
 
 if is_tendential:
     st.info(
-        f"**Lectura tendencial · base real n={n}.** "
-        "Esta lectura conserva lo observado en el producto y lo contrasta con el patrón de la categoría para evitar cambios exagerados por una base pequeña. "
-        "La base real sigue siendo la misma."
+        f"**Lectura tendencial · {n} entrevistas.** "
+        "Se muestra una lectura ajustada para reducir la variación asociada a bases pequeñas."
     )
 
 page = st.radio(
@@ -1181,16 +1161,10 @@ if page == "Resumen":
         stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
     else:
         stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
-
-    DESIGN_FIDELITY = 97
     st.markdown(
         f'<div class="base-strip">'
         f'<span class="base-pill">Base: {n} entrevistas</span>'
-        f'<span class="base-pill">{html.escape(str(quality))}</span>'
         f'<span>La secuencia declarada describe la compra para <b>{k["validacion_arbol"]:.1f}%</b> de los entrevistados.</span>'
-        f'<span class="fidelity-pill" title="Indicador heurístico de similitud estructural, jerarquía visual, color, iconografía y distribución; no es comparación pixel a pixel.">'
-        f'<span class="fidelity-dot"></span>Fidelidad visual vs referencia: {DESIGN_FIDELITY}%'
-        f'</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1369,7 +1343,7 @@ elif page == "Cómo se decide":
     )
 
     st.markdown(f"**Después de {first}:**")
-    st.caption(f"Base real de esta rama: {base2} entrevistas · Lectura {mode2.lower()}")
+    st.caption(f"Base de esta rama: {base2} entrevistas")
     st.plotly_chart(
         conditional_bar(step2, f"Qué viene después de {first}", top_n=8),
         use_container_width=True,
@@ -1398,7 +1372,7 @@ elif page == "Cómo se decide":
         )
 
         st.markdown(f"**Cierre después de {first} → {second}:**")
-        st.caption(f"Base real de esta rama: {base3} entrevistas · Lectura {mode3.lower()}")
+        st.caption(f"Base de esta rama: {base3} entrevistas")
         st.plotly_chart(
             conditional_bar(step3, "Qué termina definiendo la compra", top_n=8),
             use_container_width=True,
@@ -1458,7 +1432,7 @@ elif page == "Qué pesa más":
             use_container_width=True,
             hide_index=True,
         )
-        st.caption("La lectura tendencial conserva la señal del producto y la hace menos volátil cuando hay pocas entrevistas.")
+        st.caption("La lectura tendencial ayuda a comparar estos factores cuando la base del producto es pequeña.")
     else:
         comp = maxdiff_compare(filtered, df)
         show_total = st.toggle("Comparar con el total", value=True)
@@ -1557,7 +1531,7 @@ elif page == "Qué pasa si falta...":
     fig.update_layout(yaxis={"categoryorder": "total ascending"})
     polish_bar(fig, height=500, percent_axis=True)
     st.plotly_chart(fig, use_container_width=True)
-    st.caption("Ejemplo: “42.0% · 420” significa que 42% seguiría esa opción, equivalente a 420 de cada 1,000 compradores en la visualización. No es un pronóstico de ventas.")
+    st.caption("Ejemplo: “42.0% · 420” equivale a 420 de cada 1,000 compradores bajo el patrón seleccionado.")
 
 elif page == "Cómo ordenar el anaquel":
     st.markdown("### Cómo facilitar la compra en anaquel")
@@ -1645,11 +1619,5 @@ elif page == "Cómo ordenar el anaquel":
         polish_bar(fig2, height=420, percent_axis=True)
         st.plotly_chart(fig2, use_container_width=True)
 
-    st.caption("Esta lectura ayuda a comparar formas de organizar el anaquel. No estima un incremento directo de ventas.")
+    st.caption("Esta lectura permite comparar qué formas de organización resultan más útiles para encontrar el producto.")
 
-
-st.divider()
-st.caption(
-    f"{meta.get('project_name', 'Proyecto')} · Lectura {reading_mode.lower()} · "
-    f"Base real: {n} entrevistas · Archivo procesado únicamente durante esta sesión."
-)
