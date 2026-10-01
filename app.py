@@ -471,12 +471,16 @@ footer {visibility:hidden;}
     background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
     transition:all .16s ease;
     padding:16px 12px !important;
+    white-space:normal !important;
+}
+.st-key-study_nav [data-testid="stButton"] > button > div {
+    width:100% !important;
+    height:100% !important;
     display:flex !important;
     flex-direction:column !important;
-    justify-content:center !important;
     align-items:center !important;
-    gap:12px !important;
-    white-space:normal !important;
+    justify-content:center !important;
+    gap:13px !important;
 }
 .st-key-study_nav [data-testid="stButton"] > button:hover {
     border-color:#73A7D8;
@@ -490,21 +494,26 @@ footer {visibility:hidden;}
     box-shadow:0 8px 22px rgba(22,118,200,.13);
 }
 .st-key-study_nav [data-testid="stIconMaterial"] {
-    font-size:2.8rem !important;
+    font-size:2.9rem !important;
     line-height:1 !important;
     margin:0 !important;
     color:#1766AA;
     display:block !important;
+    flex:0 0 auto !important;
 }
 .st-key-study_nav button[kind="primary"] [data-testid="stIconMaterial"] {
     color:#0B67B4 !important;
 }
 .st-key-study_nav [data-testid="stButton"] p {
+    width:100% !important;
+    max-width:190px !important;
     font-size:1rem !important;
-    line-height:1.15 !important;
+    line-height:1.18 !important;
     font-weight:800 !important;
     text-align:center !important;
-    margin:0 !important;
+    margin:0 auto !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
 }
 .nav-subline {
     text-align:center;
