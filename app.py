@@ -314,6 +314,249 @@ def conditional_bar(table: pd.DataFrame, title: str, top_n: int = 8):
     return fig
 
 
+def _wrap_tree_label(text: str, width: int = 23) -> str:
+    words = str(text).split()
+    lines, current = [], []
+    count = 0
+    for word in words:
+        extra = len(word) + (1 if current else 0)
+        if current and count + extra > width:
+            lines.append(" ".join(current))
+            current = [word]
+            count = len(word)
+        else:
+            current.append(word)
+            count += extra
+    if current:
+        lines.append(" ".join(current))
+    return "<br>".join(lines)
+
+
+def decision_tree_figure(
+    data: pd.DataFrame,
+    reference_data: pd.DataFrame,
+    *,
+    first_choice: str | None = None,
+    force_tendential: bool = False,
+    top_d1: int = 3,
+    top_d2: int = 3,
+    top_d3: int = 2,
+) -> go.Figure:
+    """Árbol visual con probabilidades condicionales por rama, sin multiplicarlas."""
+
+    step1, mode1, base1 = conditional_reading(
+        data,
+        reference_data,
+        reference_data,
+        "decision_1",
+        force_tendential=force_tendential,
+        strength=12.0,
+    )
+
+    if first_choice and first_choice != "Todos":
+        step1 = step1[step1["opcion"] == first_choice].copy()
+    else:
+        step1 = step1.head(top_d1).copy()
+
+    branches = []
+    for _, r1 in step1.iterrows():
+        d1 = str(r1["opcion"])
+        target1 = data[data["decision_1"] == d1].copy()
+        ref1 = reference_data[reference_data["decision_1"] == d1].copy()
+
+        step2, mode2, base2 = conditional_reading(
+            target1,
+            ref1,
+            reference_data,
+            "decision_2",
+            force_tendential=force_tendential,
+            strength=14.0,
+        )
+        step2 = step2[step2["opcion"] != d1].head(top_d2).copy()
+
+        children2 = []
+        for _, r2 in step2.iterrows():
+            d2 = str(r2["opcion"])
+            target12 = target1[target1["decision_2"] == d2].copy()
+            ref12 = ref1[ref1["decision_2"] == d2].copy()
+            broader_ref = ref1 if len(ref1) else reference_data
+
+            step3, mode3, base3 = conditional_reading(
+                target12,
+                ref12,
+                broader_ref,
+                "decision_3",
+                force_tendential=force_tendential,
+                strength=12.0,
+            )
+            step3 = step3[~step3["opcion"].isin([d1, d2])].head(top_d3).copy()
+
+            children3 = [
+                {
+                    "label": str(r3["opcion"]),
+                    "pct": float(r3["porcentaje"]),
+                    "base": base3,
+                    "mode": mode3,
+                }
+                for _, r3 in step3.iterrows()
+            ]
+            children2.append({
+                "label": d2,
+                "pct": float(r2["porcentaje"]),
+                "base": base2,
+                "mode": mode2,
+                "children": children3,
+            })
+
+        branches.append({
+            "label": d1,
+            "pct": float(r1["porcentaje"]),
+            "base": base1,
+            "mode": mode1,
+            "children": children2,
+        })
+
+    # Assign vertical positions from leaves upward so branches do not overlap.
+    cursor = 0.0
+    for d1 in branches:
+        d2_positions = []
+        for d2 in d1["children"]:
+            d3_positions = []
+            if d2["children"]:
+                for d3 in d2["children"]:
+                    d3["y_raw"] = cursor
+                    d3_positions.append(cursor)
+                    cursor += 1.0
+                d2["y_raw"] = sum(d3_positions) / len(d3_positions)
+            else:
+                d2["y_raw"] = cursor
+                cursor += 1.0
+            d2_positions.append(d2["y_raw"])
+        if d2_positions:
+            d1["y_raw"] = sum(d2_positions) / len(d2_positions)
+        else:
+            d1["y_raw"] = cursor
+            cursor += 1.0
+
+    max_y = max(cursor - 1.0, 1.0)
+
+    def ny(v):
+        return 1.0 - (v / max_y if max_y else 0.5)
+
+    for d1 in branches:
+        d1["y"] = ny(d1["y_raw"])
+        for d2 in d1["children"]:
+            d2["y"] = ny(d2["y_raw"])
+            for d3 in d2["children"]:
+                d3["y"] = ny(d3["y_raw"])
+
+    root_y = sum(d["y"] for d in branches) / len(branches) if branches else 0.5
+    fig = go.Figure()
+
+    def add_edge(x0, y0, x1, y1, pct, base, mode):
+        width = 1.8 + min(6.0, max(0.0, pct) / 12.0)
+        fig.add_trace(go.Scatter(
+            x=[x0, x1],
+            y=[y0, y1],
+            mode="lines",
+            line=dict(width=width, color="rgba(70,105,140,0.38)"),
+            hovertemplate=(
+                f"<b>{pct:.1f}%</b> dentro de esta rama"
+                f"<br>Base real: {base}"
+                f"<br>Lectura: {mode}<extra></extra>"
+            ),
+            showlegend=False,
+        ))
+        fig.add_annotation(
+            x=(x0 + x1) / 2,
+            y=(y0 + y1) / 2,
+            text=f"<b>{pct:.1f}%</b>",
+            showarrow=False,
+            bgcolor="rgba(255,255,255,0.88)",
+            bordercolor="rgba(160,175,190,0.65)",
+            borderwidth=1,
+            borderpad=3,
+            font=dict(size=11, color="#23415F"),
+        )
+
+    # Root node.
+    fig.add_trace(go.Scatter(
+        x=[0],
+        y=[root_y],
+        mode="markers+text",
+        marker=dict(size=30, color="#0B3558"),
+        text=["Compra"],
+        textposition="middle right",
+        textfont=dict(size=14, color="#102A43"),
+        hovertemplate=f"Base actual: {len(data)} entrevistas<extra></extra>",
+        showlegend=False,
+    ))
+
+    node_x, node_y, node_text, node_hover, node_size = [], [], [], [], []
+
+    for d1 in branches:
+        add_edge(0.05, root_y, 1.0, d1["y"], d1["pct"], d1["base"], d1["mode"])
+        node_x.append(1.0); node_y.append(d1["y"])
+        node_text.append(f"<b>{_wrap_tree_label(d1['label'])}</b><br>{d1['pct']:.1f}%")
+        node_hover.append(f"Primero<br>{d1['pct']:.1f}%<br>Base real: {d1['base']}<br>{d1['mode']}")
+        node_size.append(26)
+
+        for d2 in d1["children"]:
+            add_edge(1.05, d1["y"], 2.0, d2["y"], d2["pct"], d2["base"], d2["mode"])
+            node_x.append(2.0); node_y.append(d2["y"])
+            node_text.append(f"<b>{_wrap_tree_label(d2['label'])}</b><br>{d2['pct']:.1f}%")
+            node_hover.append(
+                f"Después de {d1['label']}<br>{d2['pct']:.1f}%<br>"
+                f"Base real de la rama: {d2['base']}<br>{d2['mode']}"
+            )
+            node_size.append(22)
+
+            for d3 in d2["children"]:
+                add_edge(2.05, d2["y"], 3.0, d3["y"], d3["pct"], d3["base"], d3["mode"])
+                node_x.append(3.0); node_y.append(d3["y"])
+                node_text.append(f"<b>{_wrap_tree_label(d3['label'])}</b><br>{d3['pct']:.1f}%")
+                node_hover.append(
+                    f"Cierre después de {d1['label']} → {d2['label']}<br>{d3['pct']:.1f}%<br>"
+                    f"Base real de la rama: {d3['base']}<br>{d3['mode']}"
+                )
+                node_size.append(19)
+
+    if node_x:
+        fig.add_trace(go.Scatter(
+            x=node_x,
+            y=node_y,
+            mode="markers+text",
+            marker=dict(
+                size=node_size,
+                color=["#2F6B8F" if x == 1.0 else "#6A91AB" if x == 2.0 else "#A5BBCB" for x in node_x],
+                line=dict(width=1, color="white"),
+            ),
+            text=node_text,
+            customdata=node_hover,
+            hovertemplate="%{customdata}<extra></extra>",
+            textposition="middle right",
+            textfont=dict(size=11, color="#102A43"),
+            showlegend=False,
+        ))
+
+    fig.add_annotation(x=0, y=1.08, text="<b>Inicio</b>", showarrow=False, font=dict(size=13))
+    fig.add_annotation(x=1, y=1.08, text="<b>Primero</b>", showarrow=False, font=dict(size=13))
+    fig.add_annotation(x=2, y=1.08, text="<b>Después</b>", showarrow=False, font=dict(size=13))
+    fig.add_annotation(x=3, y=1.08, text="<b>Cierre</b>", showarrow=False, font=dict(size=13))
+
+    fig.update_layout(
+        title="Árbol de decisión · probabilidades dentro de cada rama",
+        height=max(650, 110 + int(cursor) * 42),
+        margin=dict(l=25, r=240, t=80, b=35),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        xaxis=dict(range=[-0.1, 3.55], visible=False, fixedrange=True),
+        yaxis=dict(range=[-0.08, 1.13], visible=False, fixedrange=True),
+        hovermode="closest",
+    )
+    return fig
+
+
 uploaded = st.file_uploader(
     "1. Carga el archivo seguro del estudio (.goideas)",
     type=["goideas"],
@@ -602,12 +845,50 @@ if page == "Resumen":
     )
 
 elif page == "Cómo se decide":
-    st.markdown("### Cómo se decide la compra")
+    st.markdown("### Árbol de decisión")
     st.caption(
-        "Aquí no multiplicamos probabilidades de una ruta completa. Cada paso se lee dentro del grupo que llegó a ese momento."
+        "Conservamos la estructura de árbol. La diferencia es que cada porcentaje se lee dentro de su propia rama: no multiplicamos toda la ruta."
     )
 
     base_reference = reference if is_tendential else filtered
+
+    first_choices = ["Todos"] + options_for(filtered, "decision_1")
+    selected_first = st.selectbox(
+        "Mostrar el árbol desde:",
+        first_choices,
+        index=0,
+        key="tree_first_choice",
+    )
+    detail = st.select_slider(
+        "Nivel de detalle",
+        options=["Simple", "Medio", "Amplio"],
+        value="Medio",
+    )
+    if detail == "Simple":
+        top_d1, top_d2, top_d3 = 3, 2, 2
+    elif detail == "Amplio":
+        top_d1, top_d2, top_d3 = 4, 4, 3
+    else:
+        top_d1, top_d2, top_d3 = 3, 3, 2
+
+    tree_fig = decision_tree_figure(
+        filtered,
+        base_reference,
+        first_choice=None if selected_first == "Todos" else selected_first,
+        force_tendential=is_tendential,
+        top_d1=top_d1,
+        top_d2=top_d2,
+        top_d3=top_d3,
+    )
+    st.plotly_chart(tree_fig, use_container_width=True)
+
+    st.info(
+        "Cómo leer el árbol: el porcentaje entre dos nodos responde a **qué proporción de quienes llegaron al nodo anterior pasa al siguiente criterio**. "
+        "Por ejemplo, 20% en Tono → Precio significa 20% de quienes empiezan por Tono pasan después a Precio."
+    )
+
+    st.markdown("#### Explora una rama paso a paso")
+    st.caption("Selecciona un criterio para ver el detalle detrás de las ramas del árbol.")
 
     # PASO 1
     if is_tendential:
@@ -627,22 +908,15 @@ elif page == "Cómo se decide":
         })
         mode1 = "Observada"
 
-    st.markdown("#### 1. ¿Con qué empieza la decisión?")
-    st.caption(f"Base: {int(filtered['decision_1'].notna().sum())} entrevistas · Lectura {mode1.lower()}")
-    st.plotly_chart(
-        conditional_bar(step1, "Primera decisión"),
-        use_container_width=True,
-    )
-
     first_options = step1["opcion"].tolist()
+    default_first = selected_first if selected_first != "Todos" and selected_first in first_options else first_options[0]
     first = st.selectbox(
-        "Quiero seguir a quienes empezaron por:",
+        "Primero:",
         first_options,
-        index=0,
+        index=first_options.index(default_first),
         key="decision_first",
     )
 
-    # PASO 2
     target_1 = filtered[filtered["decision_1"] == first].copy()
     ref_1 = base_reference[base_reference["decision_1"] == first].copy()
     step2, mode2, base2 = conditional_reading(
@@ -654,27 +928,22 @@ elif page == "Cómo se decide":
         strength=14.0,
     )
 
-    st.markdown(f"#### 2. Entre quienes empiezan por **{first}**, ¿qué viene después?")
-    note2 = (
-        f"Base real de esta rama: {base2} entrevistas · Lectura {mode2.lower()}."
-        + (" Se apoya en el patrón de referencia porque la rama es pequeña." if mode2 == "Tendencial" and not is_tendential else "")
-    )
-    st.caption(note2)
+    st.markdown(f"**Después de {first}:**")
+    st.caption(f"Base real de esta rama: {base2} entrevistas · Lectura {mode2.lower()}")
     st.plotly_chart(
-        conditional_bar(step2, f"Qué viene después de {first}"),
+        conditional_bar(step2, f"Qué viene después de {first}", top_n=8),
         use_container_width=True,
     )
 
     second_options = step2["opcion"].tolist()
     if second_options:
         second = st.selectbox(
-            "Ahora quiero seguir a quienes después tomaron en cuenta:",
+            "Después:",
             second_options,
             index=0,
             key="decision_second",
         )
 
-        # PASO 3
         target_12 = target_1[target_1["decision_2"] == second].copy()
         ref_12 = ref_1[ref_1["decision_2"] == second].copy()
         broader_d3_ref = ref_1 if len(ref_1) else base_reference
@@ -688,30 +957,15 @@ elif page == "Cómo se decide":
             strength=12.0,
         )
 
-        st.markdown(
-            f"#### 3. Entre quienes siguieron **{first} → {second}**, ¿qué termina definiendo la compra?"
-        )
-        note3 = (
-            f"Base real de esta rama: {base3} entrevistas · Lectura {mode3.lower()}."
-            + (" Se apoya en el patrón de referencia porque la rama es pequeña." if mode3 == "Tendencial" and not is_tendential else "")
-        )
-        st.caption(note3)
+        st.markdown(f"**Cierre después de {first} → {second}:**")
+        st.caption(f"Base real de esta rama: {base3} entrevistas · Lectura {mode3.lower()}")
         st.plotly_chart(
-            conditional_bar(step3, "Qué termina definiendo la compra"),
+            conditional_bar(step3, "Qué termina definiendo la compra", top_n=8),
             use_container_width=True,
         )
 
-        if len(step2) and len(step3):
-            p2 = float(step2.loc[step2["opcion"] == second, "porcentaje"].iloc[0])
-            top3 = step3.iloc[0]
-            st.info(
-                f"Lectura simple: de quienes empiezan por **{first}**, aproximadamente **{p2:.1f}%** "
-                f"pasa después a **{second}**. Dentro del siguiente paso, la opción con mayor peso es "
-                f"**{top3['opcion']} ({top3['porcentaje']:.1f}%)**."
-            )
-
     st.caption(
-        "Los porcentajes de cada gráfico suman 100% dentro de su etapa. No se multiplican entre sí; así se evita que el resultado se reduzca artificialmente por exigir una ruta completa exacta."
+        "El árbol mantiene D1 → D2 → D3. Los porcentajes se calculan de forma condicional en cada bifurcación y por eso no se hacen artificialmente pequeños por multiplicar toda la ruta."
     )
 
 elif page == "Qué pesa más":
