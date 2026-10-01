@@ -234,8 +234,8 @@ st.markdown(
     margin-bottom:14px;
 }
 .exec-icon {
-    width:50px;
-    height:50px;
+    width:54px;
+    height:54px;
     border-radius:50%;
     display:flex;
     align-items:center;
@@ -533,7 +533,7 @@ def kpi_card(label: str, value: str, note: str | None = None):
 def icon_svg(kind: str, stroke: str = "#1D5E9E") -> str:
     """Inline SVG icons so the dashboard needs no external image files."""
     paths = {
-        "hair": '<path d="M8 18c1-6 3-10 8-12 5 2 7 6 8 12M10 18c1-4 2-7 6-9 4 2 5 5 6 9M13 19c0-4 1-6 3-8 2 2 3 4 3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+        "hair": '<path d="M12 3.5c-4.7 0-7.7 3.2-7.7 8.2v7.1M12 3.5c4.7 0 7.7 3.2 7.7 8.2v7.1M7.2 18.8v-6.1c0-3.8 1.7-6.1 4.8-7.2M16.8 18.8v-6.1c0-3.8-1.7-6.1-4.8-7.2M9.3 10.4c.7-1.6 1.6-2.6 2.7-3.2 1.1.6 2 1.6 2.7 3.2M9.3 10.4v5.2c0 2.2 1.1 4 2.7 4.9 1.6-.9 2.7-2.7 2.7-4.9v-5.2" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/>',
         "diamond": '<path d="M5 9l3-4h8l3 4-7 10L5 9zM8 5l4 14 4-14M5 9h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
         "check": '<path d="M6 12l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>',
         "swap": '<path d="M5 8h11l-3-3m3 3-3 3M19 16H8l3 3m-3-3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -923,35 +923,55 @@ def decision_tree_figure(
 
 
 def reach_panel_html(alcance: pd.DataFrame) -> str:
+    """Render alcance with the largest criterion normalized to 100 visual points."""
     rows = ""
-    for _, row in alcance.head(6).iterrows():
+    display = alcance.head(6).copy()
+    max_total = max(float(display["Alcance"].max()), 1.0)
+
+    for _, row in display.iterrows():
         first = float(row.get("Primero", 0.0))
         second = float(row.get("Después", 0.0))
         close = float(row.get("Cierre", 0.0))
         total = float(row.get("Alcance", 0.0))
+
+        # Normalize the visual bar to the highest-reach criterion.
+        # The labels still show the true observed/tendential percentages.
+        first_w = first / max_total * 100.0
+        second_w = second / max_total * 100.0
+        close_w = close / max_total * 100.0
+        relative_index = total / max_total * 100.0
+
+        def seg_label(value: float, normalized_width: float) -> str:
+            return f"{value:.1f}%" if normalized_width >= 11 else ""
+
         rows += (
             '<div class="reach-row">'
             f'<div class="reach-label">{html.escape(str(row["criterio"]))}</div>'
             '<div class="reach-track">'
-            f'<div class="seg-first" style="width:{first:.2f}%"><span class="seg-label">{first:.1f}%</span></div>'
-            f'<div class="seg-second" style="width:{second:.2f}%"><span class="seg-label">{second:.1f}%</span></div>'
-            f'<div class="seg-close" style="width:{close:.2f}%"><span class="seg-label">{close:.1f}%</span></div>'
+            f'<div class="seg-first" style="width:{first_w:.2f}%"><span class="seg-label">{seg_label(first, first_w)}</span></div>'
+            f'<div class="seg-second" style="width:{second_w:.2f}%"><span class="seg-label">{seg_label(second, second_w)}</span></div>'
+            f'<div class="seg-close" style="width:{close_w:.2f}%"><span class="seg-label">{seg_label(close, close_w)}</span></div>'
             '</div>'
             f'<div class="reach-total">{total:.1f}%</div>'
             f'<div class="reach-1000">{int(row["Por cada 1,000"])}</div>'
             '</div>'
         )
+
     return (
         '<div class="summary-panel">'
         '<div class="panel-head">Qué elementos intervienen en la decisión</div>'
-        '<div class="panel-sub">Porcentaje que considera cada criterio en algún momento del proceso.</div>'
+        '<div class="panel-sub">El criterio con mayor alcance se muestra como 100 visual. Las cifras dentro de las barras conservan el porcentaje real.</div>'
         '<div class="reach-legend">'
         '<span><span class="legend-dot" style="background:#175EA8"></span>Primero</span>'
         '<span><span class="legend-dot" style="background:#4D92E8"></span>Después</span>'
         '<span><span class="legend-dot" style="background:#A9CDF4"></span>Cierre</span>'
-        '<span style="margin-left:auto"><b>Alcance</b> · de 1,000</span>'
+        '<span style="margin-left:auto"><b>Alcance real</b> · de 1,000</span>'
         '</div>'
         f'{rows}'
+        '<div class="insight-callout" style="margin-top:14px">'
+        '<b>Cómo leerlo:</b> la longitud de la barra es relativa al criterio líder (=100). '
+        'El porcentaje a la derecha sigue siendo el alcance real sobre compradores.'
+        '</div>'
         '</div>'
     )
 
@@ -1162,7 +1182,7 @@ if page == "Resumen":
     else:
         stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
 
-    DESIGN_FIDELITY = 96
+    DESIGN_FIDELITY = 97
     st.markdown(
         f'<div class="base-strip">'
         f'<span class="base-pill">Base: {n} entrevistas</span>'
