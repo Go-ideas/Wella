@@ -910,15 +910,24 @@ section[data-testid="stSidebar"] > div,
     padding:10px 11px;
 }
 .shelf-visual-summary-label{
-    font-size:.64rem;
-    color:#7A8EA4;
+    font-size:.68rem;
+    font-weight:800;
+    color:#4E6A84;
     line-height:1.2;
+    text-transform:uppercase;
+    letter-spacing:.035em;
 }
 .shelf-visual-summary-value{
-    margin-top:4px;
-    font-size:.95rem;
+    margin-top:5px;
+    font-size:1.18rem;
     font-weight:800;
     color:#173A5E;
+}
+.shelf-visual-summary-note{
+    margin-top:5px;
+    font-size:.65rem;
+    line-height:1.3;
+    color:#7A8EA4;
 }
 @media(max-width:900px){
     .shelf-unit{grid-template-columns:1fr}
@@ -3410,16 +3419,19 @@ elif page == "Cómo ordenar el anaquel":
             + '</div>'
             '<div class="shelf-visual-summary">'
             '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">Cobertura: al menos una de las dos ayudas aparece en el Top 2</div>'
+            '<div class="shelf-visual-summary-label">Al menos una coincide</div>'
             f'<div class="shelf-visual-summary-value">{float(pair["coverage"]):.1f}%</div>'
+            f'<div class="shelf-visual-summary-note">{html.escape(primary)} o {html.escape(secondary)} aparece entre sus 2 principales ayudas para encontrar el producto.</div>'
             '</div>'
             '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">Ambas entre las 2 principales</div>'
+            '<div class="shelf-visual-summary-label">Las dos coinciden</div>'
             f'<div class="shelf-visual-summary-value">{float(pair["top2_any_order"]):.1f}%</div>'
+            f'<div class="shelf-visual-summary-note">Ambas aparecen entre sus 2 principales ayudas, sin importar cuál va primero.</div>'
             '</div>'
             '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">Orden exacto seleccionado</div>'
+            '<div class="shelf-visual-summary-label">En este orden</div>'
             f'<div class="shelf-visual-summary-value">{float(pair["exact_order"]):.1f}%</div>'
+            f'<div class="shelf-visual-summary-note">Primero {html.escape(primary)} → después {html.escape(secondary)}.</div>'
             '</div>'
             '</div>'
             '</div>'
@@ -3427,8 +3439,10 @@ elif page == "Cómo ordenar el anaquel":
         st.markdown(visual_html, unsafe_allow_html=True)
 
         st.markdown(
-            f'<div class="shelf-insight">La propuesta <b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> '
-            f'cubre al menos una de las dos ayudas para <b>{float(pair["coverage"]):.1f}%</b> de los compradores.</div>',
+            f'<div class="shelf-insight">En esta configuración, <b>{float(pair["coverage"]):.1f}%</b> menciona '
+            f'<b>{html.escape(primary)}</b> o <b>{html.escape(secondary)}</b> entre sus dos principales ayudas. '
+            f'La coincidencia exacta en el orden <b>{html.escape(primary)} → {html.escape(secondary)}</b> es '
+            f'<b>{float(pair["exact_order"]):.1f}%</b>.</div>',
             unsafe_allow_html=True,
         )
 
