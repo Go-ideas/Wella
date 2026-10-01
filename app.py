@@ -219,6 +219,28 @@ def kpi_card(label: str, value: str, note: str | None = None):
     )
 
 
+def two_step_routes(data: pd.DataFrame, top_n: int = 8) -> pd.DataFrame:
+    """Rutas de dos pasos con porcentaje condicional sobre el primer paso."""
+    d = data[["decision_1", "decision_2"]].dropna()
+    if d.empty:
+        return pd.DataFrame(columns=["ruta", "entrevistas", "base_inicio", "porcentaje_dentro_inicio"])
+    base = d["decision_1"].value_counts().rename("base_inicio")
+    out = (
+        d.groupby(["decision_1", "decision_2"])
+        .size()
+        .reset_index(name="entrevistas")
+        .merge(base, left_on="decision_1", right_index=True, how="left")
+    )
+    out["porcentaje_dentro_inicio"] = out["entrevistas"] / out["base_inicio"] * 100
+    out["ruta"] = out["decision_1"].astype(str) + " → " + out["decision_2"].astype(str)
+    return (
+        out.sort_values(["entrevistas", "porcentaje_dentro_inicio"], ascending=[False, False])
+        [["ruta", "entrevistas", "base_inicio", "porcentaje_dentro_inicio"]]
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+
+
 uploaded = st.file_uploader(
     "1. Carga el archivo seguro del estudio (.goideas)",
     type=["goideas"],
@@ -454,16 +476,31 @@ if page == "Resumen":
     polish_bar(fig, height=560, percent_axis=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    routes = top_routes(filtered, 8).rename(
-        columns={"ruta": "Ruta de decisión", "n": "Entrevistas", "pct": "Porcentaje"}
+    routes2 = two_step_routes(filtered, 8)
+    st.markdown("#### Los recorridos más claros al iniciar la compra")
+    st.caption(
+        "Aquí agrupamos sólo los dos primeros pasos. Así evitamos fragmentar la muestra en cientos de combinaciones de tres pasos."
     )
-    st.markdown("#### Las rutas de decisión más frecuentes")
-    st.caption("Muestran las combinaciones que realmente aparecieron en las entrevistas.")
-    st.dataframe(
-        routes.style.format({"Porcentaje": "{:.1f}%"}),
-        use_container_width=True,
-        hide_index=True,
-    )
+    if len(routes2):
+        routes2["etiqueta"] = routes2.apply(
+            lambda r: f"{int(r['entrevistas'])} entrevistas · {r['porcentaje_dentro_inicio']:.1f}%",
+            axis=1,
+        )
+        fig_routes = px.bar(
+            routes2.sort_values("entrevistas"),
+            x="porcentaje_dentro_inicio",
+            y="ruta",
+            orientation="h",
+            text="etiqueta",
+            title="Qué suele venir después del primer criterio",
+            labels={"porcentaje_dentro_inicio": "% dentro de quienes empiezan por ese criterio", "ruta": ""},
+        )
+        fig_routes.update_traces(textposition="outside")
+        polish_bar(fig_routes, height=470, percent_axis=True)
+        st.plotly_chart(fig_routes, use_container_width=True)
+        st.caption(
+            "Ejemplo: si una ruta marca 20%, significa que 20% de quienes comenzaron por ese primer criterio siguieron por el segundo."
+        )
 
 elif page == "Cómo se decide":
     st.markdown("### Cómo se decide la compra")
