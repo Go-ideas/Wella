@@ -429,139 +429,159 @@ footer {visibility:hidden;}
 
 .nav-kicker {
     text-align:center;
-    font-size:.78rem;
+    font-size:.76rem;
     font-weight:800;
-    letter-spacing:.28em;
-    color:#6E87A5;
-    margin-top:8px;
+    letter-spacing:.26em;
+    color:#7790AA;
+    margin-top:10px;
     margin-bottom:6px;
 }
 .nav-kicker::before,.nav-kicker::after {
     content:"";
     display:inline-block;
-    width:42px;
+    width:38px;
     height:1px;
-    background:#AFC2D6;
+    background:#B8C9D9;
     vertical-align:middle;
-    margin:0 14px;
+    margin:0 12px;
 }
 .nav-title {
     text-align:center;
-    color:#092D56;
+    color:#0A2E55;
     font-size:2rem;
     font-weight:800;
     line-height:1.08;
-    margin-bottom:5px;
+    margin-bottom:6px;
 }
 .nav-subtitle {
     text-align:center;
-    color:#6E8096;
-    font-size:.94rem;
-    margin-bottom:16px;
+    color:#72859B;
+    font-size:.92rem;
+    margin-bottom:18px;
 }
-.st-key-study_nav [data-testid="stButton"] > button {
-    width:100%;
-    min-height:152px;
-    border-radius:20px !important;
-    border:1px solid #D8E3EE;
-    box-shadow:0 6px 18px rgba(27,64,102,.04);
-    font-size:1rem;
+[class*="st-key-nav_tile_"] {
+    min-height:218px;
+    border:1px solid #DCE6EF !important;
+    border-radius:22px !important;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%) !important;
+    box-shadow:0 8px 24px rgba(24,62,101,.05);
+    padding:16px 14px 14px 14px !important;
+    position:relative;
+    transition:all .18s ease;
+}
+[class*="st-key-nav_tile_"]:hover {
+    transform:translateY(-2px);
+    box-shadow:0 12px 28px rgba(24,82,135,.09);
+    border-color:#AFCDE8 !important;
+}
+[class*="st-key-nav_tile_"][class*="_active"] {
+    border:2px solid #1B79C8 !important;
+    background:linear-gradient(180deg,#F8FCFF 0%,#EDF6FF 100%) !important;
+    box-shadow:0 12px 30px rgba(27,121,200,.14);
+}
+.nav-icon-wrap {
+    position:relative;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    margin:2px auto 8px auto;
+    min-height:72px;
+}
+.nav-icon-circle {
+    width:66px;
+    height:66px;
+    border-radius:50%;
+    background:#EEF5FB;
+    color:#2369A7;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:inset 0 0 0 1px rgba(35,105,167,.05);
+}
+.nav-icon-circle.active {
+    background:linear-gradient(145deg,#0F5CA4,#2586D4);
+    color:#FFFFFF;
+    box-shadow:0 8px 18px rgba(20,105,177,.20);
+}
+.nav-icon-circle svg {
+    width:34px !important;
+    height:34px !important;
+}
+.nav-step-badge {
+    position:absolute;
+    top:-2px;
+    right:calc(50% - 43px);
+    width:23px;
+    height:23px;
+    border-radius:50%;
+    background:#FFFFFF;
+    border:1px solid #C9D8E6;
+    color:#70879E;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.69rem;
     font-weight:800;
-    color:#163858;
-    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
-    transition:all .16s ease;
-    padding:16px 12px !important;
-    white-space:normal !important;
+    z-index:2;
 }
-.st-key-study_nav [data-testid="stButton"] > button > div {
+[class*="_active"] .nav-step-badge {
+    background:#0F68B2;
+    border-color:#0F68B2;
+    color:#FFFFFF;
+}
+[class*="st-key-nav_tile_"] [data-testid="stButton"] > button {
+    width:100%;
+    min-height:40px;
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    padding:4px 6px !important;
+    color:#163858 !important;
+}
+[class*="st-key-nav_tile_"] [data-testid="stButton"] > button:hover {
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:#0E67B0 !important;
+    transform:none !important;
+}
+[class*="st-key-nav_tile_"] [data-testid="stButton"] p {
     width:100% !important;
-    height:100% !important;
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
-    gap:13px !important;
-}
-.st-key-study_nav [data-testid="stButton"] > button:hover {
-    border-color:#73A7D8;
-    box-shadow:0 7px 22px rgba(27,85,140,.10);
-    transform:translateY(-1px);
-}
-.st-key-study_nav [data-testid="stButton"] > button[kind="primary"] {
-    border:2px solid #1776C8 !important;
-    background:linear-gradient(180deg,#F7FBFF 0%,#EDF6FF 100%) !important;
-    color:#0E4C82 !important;
-    box-shadow:0 8px 22px rgba(22,118,200,.13);
-}
-.st-key-study_nav [data-testid="stIconMaterial"] {
-    font-size:2.9rem !important;
-    line-height:1 !important;
-    margin:0 !important;
-    color:#1766AA;
-    display:block !important;
-    flex:0 0 auto !important;
-}
-.st-key-study_nav button[kind="primary"] [data-testid="stIconMaterial"] {
-    color:#0B67B4 !important;
-}
-.st-key-study_nav [data-testid="stButton"] p {
-    width:100% !important;
-    max-width:190px !important;
     font-size:1rem !important;
     line-height:1.18 !important;
     font-weight:800 !important;
     text-align:center !important;
-    margin:0 auto !important;
+    margin:0 !important;
     white-space:normal !important;
-    overflow-wrap:anywhere !important;
+}
+[class*="_active"] [data-testid="stButton"] p {
+    color:#0A5D9F !important;
 }
 .nav-subline {
     text-align:center;
-    color:#7A8DA4;
-    font-size:.74rem;
-    line-height:1.2;
-    margin-top:-2px;
-    min-height:30px;
-    padding:0 5px;
+    color:#7B8EA4;
+    font-size:.75rem;
+    line-height:1.25;
+    min-height:34px;
+    padding:0 6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
 .nav-status {
     text-align:center;
-    margin-top:7px;
-    font-size:.73rem;
+    margin-top:8px;
+    font-size:.72rem;
     font-weight:800;
-    letter-spacing:.05em;
-    color:#8294AA;
+    letter-spacing:.04em;
+    color:#91A2B4;
     min-height:18px;
 }
 .nav-status.active {
     color:#0C68B5;
 }
-.nav-connector {
-    height:142px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-.nav-connector-line {
-    width:100%;
-    height:2px;
-    background:#B7C8DA;
-    position:relative;
-}
-.nav-connector-line::after {
-    content:"";
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    background:#FFFFFF;
-    border:2px solid #8FA8C0;
-    position:absolute;
-    left:50%;
-    top:50%;
-    transform:translate(-50%,-50%);
-}
 .nav-guide {
-    margin:14px 0 20px 0;
+    margin:16px 0 22px 0;
     border-radius:16px;
     background:linear-gradient(90deg,#F3F7FB,#FAFCFE);
     border:1px solid #E7EDF3;
@@ -584,7 +604,13 @@ footer {visibility:hidden;}
     justify-content:center;
     flex:0 0 auto;
 }
-
+@media (max-width: 900px) {
+    [class*="st-key-nav_tile_"] {min-height:188px;padding:13px 10px 12px 10px !important;}
+    .nav-icon-circle {width:58px;height:58px;}
+    .nav-icon-circle svg {width:30px !important;height:30px !important;}
+    .nav-title {font-size:1.55rem;}
+    .nav-subtitle {font-size:.84rem;}
+}
 @media (max-width: 1050px) {
     .summary-grid {grid-template-columns:1fr;}
     .brand-shell {grid-template-columns:130px minmax(0,1fr);}
@@ -695,6 +721,8 @@ def icon_svg(kind: str, stroke: str = "#1D5E9E") -> str:
         "megaphone": '<path d="M4 13h4l8 4V7l-8 4H4v2zM8 13l1 5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
         "chart": '<path d="M5 18V9h3v9H5zm6 0V5h3v13h-3zm6 0v-6h3v6h-3z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
         "warning": '<path d="M12 4l8 15H4L12 4zM12 9v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+        "route": '<path d="M6 5a2 2 0 1 0 0 .1M6 7v5c0 2 1 3 3 3h6M18 13a2 2 0 1 0 0 .1M18 15v4M18 19a2 2 0 1 0 0 .1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+        "grid": '<rect x="4" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="14" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/>',
     }
     body = paths.get(kind, paths["chart"])
     return (
@@ -1438,11 +1466,11 @@ if is_tendential:
     )
 
 NAV_ITEMS = [
-    ("Resumen", ":material/analytics:", "Resumen", "Vista ejecutiva"),
-    ("Cómo se decide", ":material/route:", "Decisión de compra", "Cómo eligen"),
-    ("Qué pesa más", ":material/diamond:", "Drivers clave", "Qué pesa más"),
-    ("Qué pasa si falta...", ":material/warning_amber:", "Riesgo de cambio", "Si algo falta"),
-    ("Cómo ordenar el anaquel", ":material/grid_view:", "Anaquel", "Cómo facilitar la búsqueda"),
+    ("Resumen", "chart", "Resumen", "Vista ejecutiva"),
+    ("Cómo se decide", "route", "Decisión de compra", "Cómo eligen"),
+    ("Qué pesa más", "diamond", "Drivers clave", "Qué pesa más"),
+    ("Qué pasa si falta...", "warning", "Riesgo de cambio", "Si algo falta"),
+    ("Cómo ordenar el anaquel", "grid", "Anaquel", "Cómo facilitar la búsqueda"),
 ]
 
 if "nav_page" not in st.session_state:
@@ -1451,24 +1479,33 @@ if "nav_page" not in st.session_state:
 st.markdown('<div class="nav-kicker">EXPLORA EL ESTUDIO</div>', unsafe_allow_html=True)
 st.markdown('<div class="nav-title">¿Qué quieres explorar?</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="nav-subtitle">Navega por los principales temas del estudio y descubre los hallazgos más relevantes.</div>',
+    '<div class="nav-subtitle">Elige una sección para profundizar en los principales hallazgos del estudio.</div>',
     unsafe_allow_html=True,
 )
 
 clicked_page = None
-with st.container(key="study_nav"):
-    nav_cols = st.columns([1, 0.12, 1, 0.12, 1, 0.12, 1, 0.12, 1], gap="small")
+nav_cols = st.columns(5, gap="medium")
 
-    for idx, (page_name, page_icon, page_label, page_subtitle) in enumerate(NAV_ITEMS):
-        col_idx = idx * 2
-        is_active = st.session_state["nav_page"] == page_name
+for idx, (page_name, icon_name, page_label, page_subtitle) in enumerate(NAV_ITEMS):
+    is_active = st.session_state["nav_page"] == page_name
+    tile_state = "active" if is_active else "idle"
 
-        with nav_cols[col_idx]:
+    with nav_cols[idx]:
+        with st.container(key=f"nav_tile_{idx}_{tile_state}", border=False):
+            icon_color = "#FFFFFF" if is_active else "#2369A7"
+            st.markdown(
+                f'<div class="nav-icon-wrap">'
+                f'<div class="nav-step-badge">{idx + 1}</div>'
+                f'<div class="nav-icon-circle {"active" if is_active else ""}">'
+                f'{icon_svg(icon_name, icon_color)}'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
             if st.button(
                 page_label,
                 key=f"nav_card_{idx}",
-                icon=page_icon,
-                type="primary" if is_active else "secondary",
+                type="secondary",
                 use_container_width=True,
             ):
                 clicked_page = page_name
@@ -1478,19 +1515,12 @@ with st.container(key="study_nav"):
                 unsafe_allow_html=True,
             )
 
-            status = "ESTÁS AQUÍ" if is_active else str(idx + 1)
+            status = "ESTÁS AQUÍ" if is_active else ""
             status_class = "nav-status active" if is_active else "nav-status"
             st.markdown(
                 f'<div class="{status_class}">{status}</div>',
                 unsafe_allow_html=True,
             )
-
-        if idx < len(NAV_ITEMS) - 1:
-            with nav_cols[col_idx + 1]:
-                st.markdown(
-                    '<div class="nav-connector"><div class="nav-connector-line"></div></div>',
-                    unsafe_allow_html=True,
-                )
 
 if clicked_page is not None and clicked_page != st.session_state["nav_page"]:
     st.session_state["nav_page"] = clicked_page
@@ -1507,7 +1537,7 @@ st.markdown(
           <path d="M14.8 9.2l-1.7 4-4 1.7 1.7-4 4-1.7z" fill="none" stroke="#8098B0" stroke-width="1.7" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div>Cada sección te permite profundizar en el proceso de decisión, los factores de elección y las oportunidades en anaquel.</div>
+      <div>Cada sección te permite profundizar en la decisión de compra, los drivers de elección, el riesgo de cambio y las oportunidades en anaquel.</div>
     </div>
     ''',
     unsafe_allow_html=True,
