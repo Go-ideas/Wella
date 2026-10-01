@@ -1184,10 +1184,10 @@ def decision_tree_figure(
     first_choice: str | None = None,
     force_tendential: bool = False,
     top_d1: int = 3,
-    top_d2: int = 3,
+    top_d2: int = 2,
     top_d3: int = 2,
 ) -> go.Figure:
-    """Árbol visual con probabilidades condicionales por rama, sin multiplicarlas."""
+    """Árbol ejecutivo con tarjetas y probabilidades condicionales por rama."""
 
     step1, mode1, base1 = conditional_reading(
         data,
@@ -1261,8 +1261,10 @@ def decision_tree_figure(
             "children": children2,
         })
 
-    # Assign vertical positions from leaves upward so branches do not overlap.
+    # Posicionamiento vertical a partir de las hojas.
     cursor = 0.0
+    leaf_gap = 1.0
+    branch_gap = 0.45
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1271,22 +1273,23 @@ def decision_tree_figure(
                 for d3 in d2["children"]:
                     d3["y_raw"] = cursor
                     d3_positions.append(cursor)
-                    cursor += 1.0
+                    cursor += leaf_gap
                 d2["y_raw"] = sum(d3_positions) / len(d3_positions)
             else:
                 d2["y_raw"] = cursor
-                cursor += 1.0
+                cursor += leaf_gap
             d2_positions.append(d2["y_raw"])
         if d2_positions:
             d1["y_raw"] = sum(d2_positions) / len(d2_positions)
         else:
             d1["y_raw"] = cursor
-            cursor += 1.0
+            cursor += leaf_gap
+        cursor += branch_gap
 
-    max_y = max(cursor - 1.0, 1.0)
+    max_y = max(cursor - branch_gap, 1.0)
 
     def ny(v):
-        return 1.0 - (v / max_y if max_y else 0.5)
+        return 0.92 - (v / max_y) * 0.80
 
     for d1 in branches:
         d1["y"] = ny(d1["y_raw"])
@@ -1295,111 +1298,188 @@ def decision_tree_figure(
             for d3 in d2["children"]:
                 d3["y"] = ny(d3["y_raw"])
 
-    root_y = sum(d["y"] for d in branches) / len(branches) if branches else 0.5
+    root_y = sum(d["y"] for d in branches) / len(branches) if branches else 0.52
+
+    # Ruta principal de la vista actual: primer D1 mostrado → primer D2 → primer D3.
+    highlight_first = branches[0]["label"] if branches else None
+    highlight_second = (
+        branches[0]["children"][0]["label"]
+        if branches and branches[0]["children"] else None
+    )
+    highlight_third = (
+        branches[0]["children"][0]["children"][0]["label"]
+        if branches and branches[0]["children"] and branches[0]["children"][0]["children"]
+        else None
+    )
+
     fig = go.Figure()
 
-    def add_edge(x0, y0, x1, y1, pct, base, mode):
-        width = 1.8 + min(6.0, max(0.0, pct) / 12.0)
+    x_root, x_d1, x_d2, x_d3 = 0.25, 1.25, 2.45, 3.65
+    main_blue = "#2F80ED"
+    main_fill = "#F3F8FF"
+    main_border = "#2F80ED"
+    other_line = "rgba(151,174,197,0.62)"
+    other_border = "#C9D7E4"
+    other_fill = "#FBFCFE"
+    text_color = "#163B60"
+
+    def add_edge(x0, y0, x1, y1, pct, *, highlight=False):
+        bend = (x1 - x0) * 0.35
+        xs = [x0, x0 + bend, x1 - bend, x1]
+        ys = [y0, y0, y1, y1]
+        width = (4.4 if highlight else 1.7) + min(1.4, max(0.0, pct) / 45.0)
         fig.add_trace(go.Scatter(
-            x=[x0, x1],
-            y=[y0, y1],
+            x=xs,
+            y=ys,
             mode="lines",
-            line=dict(width=width, color="rgba(70,105,140,0.38)"),
+            line=dict(
+                width=width,
+                color=main_blue if highlight else other_line,
+                shape="spline",
+                smoothing=0.75,
+            ),
+            hoverinfo="skip",
+            showlegend=False,
+        ))
+
+    def add_card(x, y, label, pct, base, mode, *, highlight=False, root=False):
+        if root:
+            fig.add_annotation(
+                x=x, y=y,
+                text="<b>Compra</b><br><span style='font-size:11px'>100%</span>",
+                showarrow=False,
+                xanchor="center",
+                yanchor="middle",
+                align="center",
+                bgcolor="#0E3A63",
+                bordercolor="#0E3A63",
+                borderwidth=1,
+                borderpad=11,
+                font=dict(size=13, color="white"),
+            )
+            return
+
+        wrapped = _wrap_tree_label(label, width=24)
+        card_text = (
+            f"<b>{wrapped}</b>"
+            f"<br><span style='color:{main_blue if highlight else '#315574'}'><b>{pct:.1f}%</b></span>"
+        )
+        fig.add_annotation(
+            x=x, y=y,
+            text=card_text,
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            align="left",
+            bgcolor=main_fill if highlight else other_fill,
+            bordercolor=main_border if highlight else other_border,
+            borderwidth=1.5 if highlight else 1,
+            borderpad=8,
+            font=dict(size=11.5, color=text_color),
+            width=190,
+        )
+        fig.add_trace(go.Scatter(
+            x=[x],
+            y=[y],
+            mode="markers",
+            marker=dict(size=48, color="rgba(0,0,0,0)"),
+            customdata=[[label, pct, base, mode]],
             hovertemplate=(
-                f"<b>{pct:.1f}%</b> dentro de esta rama"
-                f"<br>Base de la rama: {base}<extra></extra>"
+                "<b>%{customdata[0]}</b>"
+                "<br>%{customdata[1]:.1f}% dentro de esta rama"
+                "<br>Base de la rama: %{customdata[2]}"
+                "<br>Lectura: %{customdata[3]}<extra></extra>"
             ),
             showlegend=False,
         ))
-        fig.add_annotation(
-            x=(x0 + x1) / 2,
-            y=(y0 + y1) / 2,
-            text=f"<b>{pct:.1f}%</b>",
-            showarrow=False,
-            bgcolor="rgba(255,255,255,0.88)",
-            bordercolor="rgba(160,175,190,0.65)",
-            borderwidth=1,
-            borderpad=3,
-            font=dict(size=11, color="#23415F"),
-        )
 
-    # Root node.
-    fig.add_trace(go.Scatter(
-        x=[0],
-        y=[root_y],
-        mode="markers+text",
-        marker=dict(size=30, color="#0B3558"),
-        text=["Compra"],
-        textposition="middle right",
-        textfont=dict(size=14, color="#102A43"),
-        hovertemplate=f"Base actual: {len(data)} entrevistas<extra></extra>",
-        showlegend=False,
-    ))
-
-    node_x, node_y, node_text, node_hover, node_size = [], [], [], [], []
+    add_card(x_root, root_y, "Compra", 100.0, len(data), "Observada", root=True)
 
     for d1 in branches:
-        add_edge(0.05, root_y, 1.0, d1["y"], d1["pct"], d1["base"], d1["mode"])
-        node_x.append(1.0); node_y.append(d1["y"])
-        node_text.append(f"<b>{_wrap_tree_label(d1['label'])}</b><br>{d1['pct']:.1f}%")
-        node_hover.append(f"Primero<br>{d1['pct']:.1f}%<br>Base de la rama: {d1['base']}")
-        node_size.append(26)
+        h1 = d1["label"] == highlight_first
+        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], highlight=h1)
+        add_card(
+            x_d1, d1["y"], d1["label"], d1["pct"], d1["base"], d1["mode"],
+            highlight=h1,
+        )
 
         for d2 in d1["children"]:
-            add_edge(1.05, d1["y"], 2.0, d2["y"], d2["pct"], d2["base"], d2["mode"])
-            node_x.append(2.0); node_y.append(d2["y"])
-            node_text.append(f"<b>{_wrap_tree_label(d2['label'])}</b><br>{d2['pct']:.1f}%")
-            node_hover.append(
-                f"Después de {d1['label']}<br>{d2['pct']:.1f}%<br>"
-                f"Base de la rama: {d2['base']}"
+            h2 = h1 and d2["label"] == highlight_second
+            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["pct"], highlight=h2)
+            add_card(
+                x_d2, d2["y"], d2["label"], d2["pct"], d2["base"], d2["mode"],
+                highlight=h2,
             )
-            node_size.append(22)
 
             for d3 in d2["children"]:
-                add_edge(2.05, d2["y"], 3.0, d3["y"], d3["pct"], d3["base"], d3["mode"])
-                node_x.append(3.0); node_y.append(d3["y"])
-                node_text.append(f"<b>{_wrap_tree_label(d3['label'])}</b><br>{d3['pct']:.1f}%")
-                node_hover.append(
-                    f"Cierre después de {d1['label']} → {d2['label']}<br>{d3['pct']:.1f}%<br>"
-                    f"Base de la rama: {d3['base']}"
+                h3 = h2 and d3["label"] == highlight_third
+                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["pct"], highlight=h3)
+                add_card(
+                    x_d3, d3["y"], d3["label"], d3["pct"], d3["base"], d3["mode"],
+                    highlight=h3,
                 )
-                node_size.append(19)
 
-    if node_x:
-        fig.add_trace(go.Scatter(
-            x=node_x,
-            y=node_y,
-            mode="markers+text",
-            marker=dict(
-                size=node_size,
-                color=["#2F6B8F" if x == 1.0 else "#6A91AB" if x == 2.0 else "#A5BBCB" for x in node_x],
-                line=dict(width=1, color="white"),
-            ),
-            text=node_text,
-            customdata=node_hover,
-            hovertemplate="%{customdata}<extra></extra>",
-            textposition="middle right",
-            textfont=dict(size=11, color="#102A43"),
-            showlegend=False,
-        ))
+    # Encabezados de columnas.
+    for x, title, subtitle in [
+        (x_root, "Inicio", "Todos"),
+        (x_d1, "Primero", "¿Qué aparece primero?"),
+        (x_d2, "Después", "¿Qué sigue?"),
+        (x_d3, "Cierre", "¿Qué termina definiendo?"),
+    ]:
+        fig.add_annotation(
+            x=x, y=1.035,
+            text=f"<b>{title}</b><br><span style='font-size:10px;color:#8092A6'>{subtitle}</span>",
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            align="center",
+            bgcolor="#F3F7FB",
+            bordercolor="#F3F7FB",
+            borderpad=7,
+            font=dict(size=12, color="#35516E"),
+            width=190 if x != x_root else 135,
+        )
 
-    fig.add_annotation(x=0, y=1.08, text="<b>Inicio</b>", showarrow=False, font=dict(size=13))
-    fig.add_annotation(x=1, y=1.08, text="<b>Primero</b>", showarrow=False, font=dict(size=13))
-    fig.add_annotation(x=2, y=1.08, text="<b>Después</b>", showarrow=False, font=dict(size=13))
-    fig.add_annotation(x=3, y=1.08, text="<b>Cierre</b>", showarrow=False, font=dict(size=13))
+    # Leyenda de lectura.
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], mode="lines",
+        line=dict(color=main_blue, width=5),
+        name="Ruta principal",
+        showlegend=True,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], mode="lines",
+        line=dict(color=other_line, width=4),
+        name="Otras rutas",
+        showlegend=True,
+    ))
+
+    leaf_count = sum(
+        max(1, len(d2["children"]))
+        for d1 in branches
+        for d2 in d1["children"]
+    )
+    height = min(760, max(500, 380 + leaf_count * 22))
 
     fig.update_layout(
-        title="Árbol de decisión · probabilidades dentro de cada rama",
-        height=max(650, 110 + int(cursor) * 42),
-        margin=dict(l=25, r=240, t=80, b=35),
+        height=height,
+        margin=dict(l=28, r=28, t=78, b=25),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        xaxis=dict(range=[-0.1, 3.55], visible=False, fixedrange=True),
-        yaxis=dict(range=[-0.08, 1.13], visible=False, fixedrange=True),
+        xaxis=dict(range=[-0.05, 4.03], visible=False, fixedrange=True),
+        yaxis=dict(range=[0.04, 1.10], visible=False, fixedrange=True),
         hovermode="closest",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.075,
+            xanchor="right",
+            x=1.0,
+            bgcolor="rgba(255,255,255,0)",
+            font=dict(size=11, color="#6B7E93"),
+        ),
     )
     return fig
-
 
 def product_language(filters: dict) -> dict:
     """Client-facing terminology adapts to the selected product."""
@@ -2156,11 +2236,11 @@ elif page == "Cómo se decide":
         )
 
     if detail == "Simple":
-        top_d1, top_d2, top_d3 = 3, 2, 2
+        top_d1, top_d2, top_d3 = 2, 2, 1
     elif detail == "Amplio":
-        top_d1, top_d2, top_d3 = 4, 4, 3
+        top_d1, top_d2, top_d3 = 4, 3, 2
     else:
-        top_d1, top_d2, top_d3 = 3, 3, 2
+        top_d1, top_d2, top_d3 = 3, 2, 2
 
     with st.container(key="decision_tree_panel", border=True):
         st.markdown(
