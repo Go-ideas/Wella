@@ -37,7 +37,7 @@ from tendential import (
     shelf_priority_tendential,
     shelf_pair_tendential,
     friction_tendential,
-    probabilistic_routes,
+    categorical_tendential,
 )
 
 st.set_page_config(page_title="Wella | Decision Simulator", page_icon="🎯", layout="wide")
@@ -240,6 +240,78 @@ def two_step_routes(data: pd.DataFrame, top_n: int = 8) -> pd.DataFrame:
         .head(top_n)
         .reset_index(drop=True)
     )
+
+
+def decision_reach(stage: pd.DataFrame) -> pd.DataFrame:
+    """Suma el peso de un criterio en D1, D2 y D3.
+
+    La suma es válida porque el cuestionario no permite repetir el mismo criterio
+    dentro de la secuencia D1 → D2 → D3.
+    """
+    needed = ["Primero", "Después", "Cierre"]
+    p = (
+        stage.pivot_table(index="criterio", columns="etapa", values="porcentaje", aggfunc="sum", fill_value=0)
+        .reindex(columns=needed, fill_value=0)
+        .reset_index()
+    )
+    p["Alcance"] = p[needed].sum(axis=1).clip(upper=100)
+    p["Por cada 1,000"] = (p["Alcance"] * 10).round().astype(int)
+    return p.sort_values("Alcance", ascending=False).reset_index(drop=True)
+
+
+def conditional_reading(
+    target_subset: pd.DataFrame,
+    reference_subset: pd.DataFrame,
+    broader_reference: pd.DataFrame,
+    col: str,
+    *,
+    force_tendential: bool = False,
+    strength: float = 16.0,
+) -> tuple[pd.DataFrame, str, int]:
+    """Distribución condicional simple; usa apoyo tendencial cuando la rama es pequeña."""
+    base_n = int(target_subset[col].notna().sum()) if col in target_subset.columns else 0
+    use_tendential = force_tendential or base_n < 30
+
+    if use_tendential:
+        ref = reference_subset if len(reference_subset) >= 20 else broader_reference
+        t = categorical_tendential(
+            target_subset,
+            ref,
+            col,
+            strength=strength,
+            label_name="opcion",
+        )
+        out = t[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
+        mode = "Tendencial"
+    else:
+        counts = target_subset[col].dropna().value_counts()
+        total = int(counts.sum())
+        out = pd.DataFrame({
+            "opcion": counts.index.astype(str),
+            "porcentaje": counts.values / total * 100 if total else [],
+        })
+        mode = "Observada"
+
+    out = out.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+    return out, mode, base_n
+
+
+def conditional_bar(table: pd.DataFrame, title: str, top_n: int = 8):
+    shown = table.head(top_n).copy()
+    shown["valor"] = shown["porcentaje"].map(lambda x: f"{x:.1f}%")
+    fig = px.bar(
+        shown.sort_values("porcentaje"),
+        x="porcentaje",
+        y="opcion",
+        orientation="h",
+        text="valor",
+        title=title,
+        labels={"porcentaje": "Probabilidad dentro de esta etapa", "opcion": ""},
+    )
+    fig.update_traces(textposition="outside")
+    fig.update_layout(xaxis_range=[0, max(100, float(shown["porcentaje"].max()) * 1.18) if len(shown) else 100])
+    polish_bar(fig, height=max(330, 70 + 42 * len(shown)), percent_axis=True)
+    return fig
 
 
 uploaded = st.file_uploader(
@@ -477,125 +549,170 @@ if page == "Resumen":
     polish_bar(fig, height=560, percent_axis=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    route_reference = reference if is_tendential else filtered
-    prob_routes = probabilistic_routes(filtered, route_reference, top_n=10)
+    alcance = decision_reach(stage)
 
-    st.markdown("#### Rutas con mayor probabilidad de ocurrir")
+    st.markdown("#### Alcance de cada criterio en la decisión")
     st.caption(
-        "En lugar de contar sólo combinaciones exactas, estimamos la probabilidad de cada recorrido a partir de las transiciones entre decisiones."
+        "Alcance significa que el criterio aparece en algún momento: al inicio, después o al cierre. "
+        "Como el cuestionario no permite repetir el mismo criterio dentro de la secuencia, estos tres porcentajes sí pueden sumarse."
     )
 
-    if len(prob_routes):
-        top5_reach = float(prob_routes.head(5)["probabilidad"].sum())
-        st.markdown(
-            f"**Las 5 rutas principales concentran aproximadamente {top5_reach:.1f}% del alcance estimado.**"
+    reach_long = alcance.melt(
+        id_vars=["criterio", "Alcance", "Por cada 1,000"],
+        value_vars=["Primero", "Después", "Cierre"],
+        var_name="Momento",
+        value_name="porcentaje",
+    )
+    reach_long["texto"] = reach_long["porcentaje"].map(lambda x: f"{x:.1f}%" if x >= 4 else "")
+
+    ordered = alcance.sort_values("Alcance")["criterio"].tolist()
+    fig_reach = px.bar(
+        reach_long,
+        x="porcentaje",
+        y="criterio",
+        color="Momento",
+        orientation="h",
+        barmode="stack",
+        text="texto",
+        category_orders={"criterio": ordered, "Momento": ["Primero", "Después", "Cierre"]},
+        title="Cuántos compradores consideran cada criterio en algún momento",
+        labels={"porcentaje": "Alcance", "criterio": "", "Momento": "Momento"},
+    )
+    fig_reach.update_traces(textposition="inside", insidetextanchor="middle")
+
+    for _, row in alcance.iterrows():
+        fig_reach.add_annotation(
+            x=min(float(row["Alcance"]) + 1.5, 99),
+            y=row["criterio"],
+            text=f'<b>{row["Alcance"]:.1f}%</b> · {int(row["Por cada 1,000"])} de 1,000',
+            showarrow=False,
+            xanchor="left",
+            font=dict(size=12),
         )
 
-        prob_routes["etiqueta"] = prob_routes.apply(
-            lambda r: f"{r['probabilidad']:.1f}% · {int(r['alcance_por_1000'])} de cada 1,000",
-            axis=1,
-        )
-        fig_routes = px.bar(
-            prob_routes.sort_values("probabilidad"),
-            x="probabilidad",
-            y="ruta",
-            orientation="h",
-            text="etiqueta",
-            title="Alcance estimado de las rutas de decisión",
-            labels={"probabilidad": "Probabilidad estimada", "ruta": ""},
-        )
-        fig_routes.update_traces(textposition="outside")
-        polish_bar(fig_routes, height=540, percent_axis=True)
-        st.plotly_chart(fig_routes, use_container_width=True)
-        st.caption(
-            "El porcentaje es una estimación probabilística del recorrido. “40 de cada 1,000” significa que esa ruta tendría un alcance esperado cercano a 40 compradores por cada 1,000 con un patrón similar."
-        )
+    fig_reach.update_layout(
+        xaxis_range=[0, 105],
+        yaxis={"categoryorder": "array", "categoryarray": ordered},
+        legend_title_text="Momento en que aparece",
+    )
+    polish_bar(fig_reach, height=max(520, 90 + 42 * len(alcance)), percent_axis=True)
+    st.plotly_chart(fig_reach, use_container_width=True)
+    st.caption(
+        "Ejemplo: un alcance de 56% significa que ese criterio interviene en la decisión de aproximadamente 560 de cada 1,000 compradores, sin importar si aparece primero, después o al cierre."
+    )
 
 elif page == "Cómo se decide":
     st.markdown("### Cómo se decide la compra")
-    st.caption("Lee el recorrido de izquierda a derecha: primero qué se decide, después qué se compara y al final qué termina definiendo la compra.")
-
-    choices = ["Todos"] + options_for(filtered, "decision_1")
-    sel = st.selectbox("Quiero ver el recorrido que empieza por:", choices, index=0)
-    depth = st.slider(
-        "Cuántas ramas mostrar",
-        2,
-        6,
-        4,
-        help="Menos ramas hacen el gráfico más simple; más ramas muestran mayor detalle.",
+    st.caption(
+        "Aquí no multiplicamos probabilidades de una ruta completa. Cada paso se lee dentro del grupo que llegó a ese momento."
     )
 
-    probability_reference = reference if is_tendential else filtered
-    links = tree_links_tendential(
-        filtered,
-        probability_reference,
-        None if sel == "Todos" else sel,
-        top_d1=5,
-        top_d2=depth,
-        top_d3=max(2, depth - 1),
-    )
+    base_reference = reference if is_tendential else filtered
 
-    if not links["labels"]:
-        st.warning("No hay información suficiente para mostrar este recorrido.")
+    # PASO 1
+    if is_tendential:
+        step1 = categorical_tendential(
+            filtered,
+            base_reference,
+            "decision_1",
+            strength=12.0,
+            label_name="opcion",
+        )[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
+        mode1 = "Tendencial"
     else:
-        root_total = sum(v for src, v in zip(links["source"], links["value"]) if src == 0) or float(n)
-        incoming = [0.0] * len(links["labels"])
-        for tgt, val in zip(links["target"], links["value"]):
-            incoming[tgt] += float(val)
+        counts1 = filtered["decision_1"].dropna().value_counts()
+        step1 = pd.DataFrame({
+            "opcion": counts1.index.astype(str),
+            "porcentaje": counts1.values / counts1.sum() * 100,
+        })
+        mode1 = "Observada"
 
-        display_labels = []
-        for idx, label in enumerate(links["labels"]):
-            if idx == 0:
-                display_labels.append(f"Compra<br>Base {n}")
-            else:
-                share = incoming[idx] / root_total * 100 if root_total else 0
-                display_labels.append(f"{label}<br>{share:.1f}%")
+    st.markdown("#### 1. ¿Con qué empieza la decisión?")
+    st.caption(f"Base: {int(filtered['decision_1'].notna().sum())} entrevistas · Lectura {mode1.lower()}")
+    st.plotly_chart(
+        conditional_bar(step1, "Primera decisión"),
+        use_container_width=True,
+    )
 
-        fig = go.Figure(
-            go.Sankey(
-                arrangement="snap",
-                node=dict(label=display_labels, pad=22, thickness=20),
-                link=dict(
-                    source=links["source"],
-                    target=links["target"],
-                    value=links["value"],
-                    customdata=links["custom"],
-                    hovertemplate="%{source.label} → %{target.label}<br>%{customdata}<extra></extra>",
-                ),
-            )
-        )
-        fig.update_layout(
-            title="Ruta de decisión de compra",
-            height=720,
-            font_size=13,
-            margin=dict(l=10, r=10, t=65, b=15),
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    first_options = step1["opcion"].tolist()
+    first = st.selectbox(
+        "Quiero seguir a quienes empezaron por:",
+        first_options,
+        index=0,
+        key="decision_first",
+    )
 
-        st.caption(
-            "El tamaño de cada rama representa una probabilidad estimada de transición entre decisiones. No depende únicamente de contar rutas exactas."
+    # PASO 2
+    target_1 = filtered[filtered["decision_1"] == first].copy()
+    ref_1 = base_reference[base_reference["decision_1"] == first].copy()
+    step2, mode2, base2 = conditional_reading(
+        target_1,
+        ref_1,
+        base_reference,
+        "decision_2",
+        force_tendential=is_tendential,
+        strength=14.0,
+    )
+
+    st.markdown(f"#### 2. Entre quienes empiezan por **{first}**, ¿qué viene después?")
+    note2 = (
+        f"Base real de esta rama: {base2} entrevistas · Lectura {mode2.lower()}."
+        + (" Se apoya en el patrón de referencia porque la rama es pequeña." if mode2 == "Tendencial" and not is_tendential else "")
+    )
+    st.caption(note2)
+    st.plotly_chart(
+        conditional_bar(step2, f"Qué viene después de {first}"),
+        use_container_width=True,
+    )
+
+    second_options = step2["opcion"].tolist()
+    if second_options:
+        second = st.selectbox(
+            "Ahora quiero seguir a quienes después tomaron en cuenta:",
+            second_options,
+            index=0,
+            key="decision_second",
         )
 
-    st.markdown("#### Rutas con mayor alcance estimado")
-    probability_reference = reference if is_tendential else filtered
-    route_table = probabilistic_routes(filtered, probability_reference, top_n=12).copy()
-    if len(route_table):
-        route_table = route_table[["ruta", "probabilidad", "alcance_por_1000", "prob_acumulada"]].rename(
-            columns={
-                "ruta": "Ruta de decisión",
-                "probabilidad": "Probabilidad estimada",
-                "alcance_por_1000": "Alcance por cada 1,000",
-                "prob_acumulada": "Alcance acumulado",
-            }
+        # PASO 3
+        target_12 = target_1[target_1["decision_2"] == second].copy()
+        ref_12 = ref_1[ref_1["decision_2"] == second].copy()
+        broader_d3_ref = ref_1 if len(ref_1) else base_reference
+
+        step3, mode3, base3 = conditional_reading(
+            target_12,
+            ref_12,
+            broader_d3_ref,
+            "decision_3",
+            force_tendential=is_tendential,
+            strength=12.0,
         )
-        st.dataframe(
-            route_table.style.format({
-                "Probabilidad estimada": "{:.1f}%",
-                "Alcance acumulado": "{:.1f}%",
-            }),
+
+        st.markdown(
+            f"#### 3. Entre quienes siguieron **{first} → {second}**, ¿qué termina definiendo la compra?"
+        )
+        note3 = (
+            f"Base real de esta rama: {base3} entrevistas · Lectura {mode3.lower()}."
+            + (" Se apoya en el patrón de referencia porque la rama es pequeña." if mode3 == "Tendencial" and not is_tendential else "")
+        )
+        st.caption(note3)
+        st.plotly_chart(
+            conditional_bar(step3, "Qué termina definiendo la compra"),
             use_container_width=True,
-            hide_index=True,
         )
+
+        if len(step2) and len(step3):
+            p2 = float(step2.loc[step2["opcion"] == second, "porcentaje"].iloc[0])
+            top3 = step3.iloc[0]
+            st.info(
+                f"Lectura simple: de quienes empiezan por **{first}**, aproximadamente **{p2:.1f}%** "
+                f"pasa después a **{second}**. Dentro del siguiente paso, la opción con mayor peso es "
+                f"**{top3['opcion']} ({top3['porcentaje']:.1f}%)**."
+            )
+
+    st.caption(
+        "Los porcentajes de cada gráfico suman 100% dentro de su etapa. No se multiplican entre sí; así se evita que el resultado se reduzca artificialmente por exigir una ruta completa exacta."
+    )
 
 elif page == "Qué pesa más":
     st.markdown("### Qué pesa más al elegir")
