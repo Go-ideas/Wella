@@ -1345,8 +1345,11 @@ def decision_tree_figure(
     # Así cada nodo conserva una separación mínima en píxeles aunque cambie
     # el tamaño de la ventana, el nivel de detalle o la cantidad de ramas.
     cursor = 0.0
-    leaf_gap = 1.05
-    branch_gap = 0.58
+    # Separación vertical: suficiente para que las tarjetas de Cierre no se toquen,
+    # sin volver a abrir demasiado todo el árbol.
+    leaf_gap = 1.18
+    d2_group_gap = 0.18
+    branch_gap = 0.60
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1357,6 +1360,8 @@ def decision_tree_figure(
                     d3_positions.append(cursor)
                     cursor += leaf_gap
                 d2["y_raw"] = sum(d3_positions) / len(d3_positions)
+                # Un poco de aire entre grupos de cierres pertenecientes a distintos D2.
+                cursor += d2_group_gap
             else:
                 d2["y_raw"] = cursor
                 cursor += leaf_gap
@@ -1564,10 +1569,9 @@ def decision_tree_figure(
         showlegend=True,
     ))
 
-    # Separación compacta pero segura: ~70 px entre hojas para tarjetas de 50 px.
-    # El gráfico crece sólo lo necesario para evitar encimados sin dejar huecos excesivos.
+    # Separación compacta pero segura: el cierre conserva aire suficiente entre tarjetas.
     vertical_span = max_y + 2.05
-    height = int(max(540, min(1550, 165 + vertical_span * 68)))
+    height = int(max(560, min(1650, 165 + vertical_span * 70)))
 
     fig.update_layout(
         height=height,
