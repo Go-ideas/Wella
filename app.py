@@ -472,7 +472,7 @@ st.markdown(
 
 
 def clear_loaded_data() -> None:
-    for key in ["dataset", "metadata", "package_fp", "loaded_name", "unlock_password"]:
+    for key in ["dataset", "metadata", "package_fp", "loaded_name", "unlock_password", "insight_cache"]:
         if key in st.session_state:
             del st.session_state[key]
     gc.collect()
@@ -905,7 +905,133 @@ def decision_tree_figure(
     return fig
 
 
-def reach_panel_html(alcance: pd.DataFrame) -> str:
+INSIGHT_ENGINE_VERSION = "1.0"
+
+
+def _filter_signature(filters: dict, reading_mode: str, n: int) -> tuple:
+    """Stable key: same dataset/filter state -> same insight text."""
+    normalized = []
+    for key in sorted(filters):
+        value = filters.get(key)
+        if isinstance(value, list):
+            normalized.append((key, tuple(sorted(str(v) for v in value))))
+        elif value is None:
+            normalized.append((key, ()))
+        else:
+            normalized.append((key, (str(value),)))
+    return (INSIGHT_ENGINE_VERSION, tuple(normalized), str(reading_mode), int(n))
+
+
+def build_dynamic_insights(
+    alcance: pd.DataFrame,
+    md: pd.DataFrame,
+    k: dict,
+) -> dict:
+    """Generate client-facing insights using deterministic rules only."""
+    insights = {
+        "reach": "La lectura cambia automáticamente con la selección actual.",
+        "drivers": "Los factores con mayor peso cambian con la selección actual.",
+        "substitution": "La respuesta ante faltantes cambia con la selección actual.",
+    }
+
+    # 1) Reach insight
+    if alcance is not None and len(alcance):
+        r = alcance.sort_values("Alcance", ascending=False).reset_index(drop=True)
+        top = r.iloc[0]
+        second = r.iloc[1] if len(r) > 1 else top
+        gap = float(top["Alcance"]) - float(second["Alcance"])
+        moment_cols = ["Primero", "Después", "Cierre"]
+        dominant_moment = max(moment_cols, key=lambda c: float(top.get(c, 0.0)))
+        dominant_value = float(top.get(dominant_moment, 0.0))
+        top_name = str(top["criterio"])
+        top_reach = float(top["Alcance"])
+
+        if gap >= 10:
+            lead_phrase = f"lidera con claridad y supera al segundo criterio por {gap:.1f} puntos"
+        elif gap >= 3:
+            lead_phrase = f"mantiene el mayor alcance, {gap:.1f} puntos por encima del segundo criterio"
+        else:
+            lead_phrase = "comparte un nivel de alcance muy cercano con el siguiente criterio"
+
+        insights["reach"] = (
+            f"<b>{html.escape(top_name)}</b> alcanza a <b>{top_reach:.1f}%</b> de los compradores; "
+            f"{lead_phrase}. Su mayor presencia ocurre en <b>{dominant_moment.lower()}</b> "
+            f"({dominant_value:.1f}%)."
+        )
+
+    # 2) Driver insight
+    if md is not None and len(md):
+        d = md.sort_values("valor", ascending=False).reset_index(drop=True)
+        top = d.iloc[0]
+        second = d.iloc[1] if len(d) > 1 else top
+        top_name = str(top["driver"])
+        second_name = str(second["driver"])
+        top_value = float(top["valor"])
+        second_value = float(second["valor"])
+        gap = top_value - second_value
+
+        if gap >= 2.0:
+            relation = f"muestra una ventaja clara de {gap:.1f} puntos"
+        elif gap >= 0.7:
+            relation = f"mantiene una ventaja moderada de {gap:.1f} puntos"
+        else:
+            relation = "comparte prácticamente el liderazgo"
+
+        insights["drivers"] = (
+            f"<b>{html.escape(top_name)}</b> es el factor con mayor peso ({top_value:.1f}); "
+            f"{relation} frente a <b>{html.escape(second_name)}</b> ({second_value:.1f})."
+        )
+
+    # 3) Substitution insight
+    brand = float(k.get("cambia_marca_si_falta_marca", 0.0))
+    tone = float(k.get("cambia_marca_para_conservar_tono", 0.0))
+    promo = float(k.get("compra_sin_promocion", 0.0))
+
+    if brand >= 65:
+        brand_phrase = f"la falta de marca genera un riesgo alto de sustitución ({brand:.1f}%)"
+    elif brand >= 45:
+        brand_phrase = f"la falta de marca genera un riesgo relevante de sustitución ({brand:.1f}%)"
+    else:
+        brand_phrase = f"la falta de marca muestra un riesgo contenido de sustitución ({brand:.1f}%)"
+
+    if tone >= 50:
+        tone_phrase = f"el tono también domina con fuerza sobre la lealtad a marca ({tone:.1f}%)"
+    elif tone >= 30:
+        tone_phrase = f"el tono también puede provocar cambio de marca ({tone:.1f}%)"
+    else:
+        tone_phrase = f"el tono provoca menor cambio de marca ({tone:.1f}%)"
+
+    if promo >= 60:
+        promo_phrase = f"mientras que la promoción es menos determinante: {promo:.1f}% compraría aun sin ella"
+    elif promo >= 40:
+        promo_phrase = f"y la ausencia de promoción divide más la decisión: {promo:.1f}% compraría aun sin ella"
+    else:
+        promo_phrase = f"y la promoción tiene mayor capacidad de retener la compra: sólo {promo:.1f}% compraría sin ella"
+
+    insights["substitution"] = (
+        f"{brand_phrase}; {tone_phrase}; {promo_phrase}."
+    )
+
+    return insights
+
+
+def get_cached_dynamic_insights(
+    filters: dict,
+    reading_mode: str,
+    n: int,
+    alcance: pd.DataFrame,
+    md: pd.DataFrame,
+    k: dict,
+) -> dict:
+    """Cache by a stable filter key; deterministic across repeated selections."""
+    key = _filter_signature(filters, reading_mode, n)
+    cache = st.session_state.setdefault("insight_cache", {})
+    if key not in cache:
+        cache[key] = build_dynamic_insights(alcance, md, k)
+    return cache[key]
+
+
+def reach_panel_html(alcance: pd.DataFrame, insight: str) -> str:
     """Render alcance with the largest criterion normalized to 100 visual points."""
     rows = ""
     display = alcance.head(6).copy()
@@ -952,14 +1078,13 @@ def reach_panel_html(alcance: pd.DataFrame) -> str:
         '</div>'
         f'{rows}'
         '<div class="insight-callout" style="margin-top:14px">'
-        '<b>Cómo leerlo:</b> la longitud de la barra es relativa al criterio líder (=100). '
-        'El porcentaje a la derecha sigue siendo el alcance real sobre compradores.'
+        f'{icon_svg("chart", "#1D5E9E")} {insight}'
         '</div>'
         '</div>'
     )
 
 
-def drivers_panel_html(md: pd.DataFrame) -> str:
+def drivers_panel_html(md: pd.DataFrame, insight: str) -> str:
     ordered = md.sort_values("valor", ascending=False).head(5).copy()
     max_value = max(float(ordered["valor"].max()), 1.0)
     rows = ""
@@ -975,23 +1100,19 @@ def drivers_panel_html(md: pd.DataFrame) -> str:
             f'<div class="driver-value">{value:.1f}</div>'
             '</div>'
         )
-    top = ordered.iloc[0]
-    second = ordered.iloc[1] if len(ordered) > 1 else top
     return (
         '<div class="summary-panel">'
         '<div class="panel-head">Qué genera mayor valor al elegir</div>'
         '<div class="panel-sub">Factores con mayor importancia relativa.</div>'
         f'{rows}'
         '<div class="insight-callout">'
-        f'{icon_svg("diamond", "#5B4AE6")} '
-        f'<b>{html.escape(str(top["driver"]))}</b> lidera; '
-        f'<b>{html.escape(str(second["driver"]))}</b> también tiene un peso alto.'
+        f'{icon_svg("diamond", "#5B4AE6")} {insight}'
         '</div>'
         '</div>'
     )
 
 
-def substitution_panel_html(k: dict) -> str:
+def substitution_panel_html(k: dict, insight: str) -> str:
     rows = [
         ("swap", "#D84B65", "#FDECEF", float(k["cambia_marca_si_falta_marca"]), "Cambia de marca si no encuentra su marca"),
         ("hair", "#E7862E", "#FFF2E6", float(k["cambia_marca_para_conservar_tono"]), "Cambia de marca para conservar su tono"),
@@ -1012,7 +1133,7 @@ def substitution_panel_html(k: dict) -> str:
         '<div class="panel-sub">Situaciones que pueden cambiar la elección.</div>'
         f'{html_rows}'
         '<div class="insight-callout" style="background:#FFF3F4;border-color:#F6DDE0;color:#8E3243">'
-        'La disponibilidad de marca y tono puede alterar la elección más que la ausencia de promoción.'
+        f'{insight}'
         '</div>'
         '</div>'
     )
@@ -1222,11 +1343,20 @@ if page == "Resumen":
         md = maxdiff_compare(filtered, df).head(5).copy()
         md["valor"] = md["segmento"]
 
+    dynamic_insights = get_cached_dynamic_insights(
+        filters,
+        reading_mode,
+        n,
+        alcance,
+        md,
+        k,
+    )
+
     st.markdown(
         '<div class="summary-grid">'
-        + reach_panel_html(alcance)
-        + drivers_panel_html(md)
-        + substitution_panel_html(k)
+        + reach_panel_html(alcance, dynamic_insights["reach"])
+        + drivers_panel_html(md, dynamic_insights["drivers"])
+        + substitution_panel_html(k, dynamic_insights["substitution"])
         + '</div>',
         unsafe_allow_html=True,
     )
