@@ -426,11 +426,152 @@ footer {visibility:hidden;}
 .sub-icon {width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .sub-value {font-size:1.25rem;font-weight:800;color:#13395F;}
 .sub-label {font-size:.79rem;color:#304A63;line-height:1.25;}
+
+.nav-kicker {
+    text-align:center;
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.28em;
+    color:#6E87A5;
+    margin-top:8px;
+    margin-bottom:6px;
+}
+.nav-kicker::before,.nav-kicker::after {
+    content:"";
+    display:inline-block;
+    width:42px;
+    height:1px;
+    background:#AFC2D6;
+    vertical-align:middle;
+    margin:0 14px;
+}
+.nav-title {
+    text-align:center;
+    color:#092D56;
+    font-size:2rem;
+    font-weight:800;
+    line-height:1.08;
+    margin-bottom:5px;
+}
+.nav-subtitle {
+    text-align:center;
+    color:#6E8096;
+    font-size:.94rem;
+    margin-bottom:16px;
+}
+.st-key-study_nav [data-testid="stButton"] > button {
+    width:100%;
+    min-height:142px;
+    border-radius:20px !important;
+    border:1px solid #D8E3EE;
+    box-shadow:0 6px 18px rgba(27,64,102,.04);
+    font-size:1rem;
+    font-weight:750;
+    color:#163858;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
+    transition:all .16s ease;
+    padding:14px 10px !important;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:9px;
+}
+.st-key-study_nav [data-testid="stButton"] > button:hover {
+    border-color:#73A7D8;
+    box-shadow:0 7px 22px rgba(27,85,140,.10);
+    transform:translateY(-1px);
+}
+.st-key-study_nav [data-testid="stButton"] > button[kind="primary"] {
+    border:2px solid #1776C8 !important;
+    background:linear-gradient(180deg,#F7FBFF 0%,#EDF6FF 100%) !important;
+    color:#0E4C82 !important;
+    box-shadow:0 8px 22px rgba(22,118,200,.13);
+}
+.st-key-study_nav [data-testid="stIconMaterial"] {
+    font-size:2.45rem !important;
+    line-height:1 !important;
+    margin:0 !important;
+    color:#1766AA;
+}
+.st-key-study_nav button[kind="primary"] [data-testid="stIconMaterial"] {
+    color:#0B67B4 !important;
+}
+.st-key-study_nav [data-testid="stButton"] p {
+    font-size:1rem !important;
+    line-height:1.18 !important;
+    font-weight:750 !important;
+    text-align:center !important;
+}
+.nav-status {
+    text-align:center;
+    margin-top:7px;
+    font-size:.73rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    color:#8294AA;
+    min-height:18px;
+}
+.nav-status.active {
+    color:#0C68B5;
+}
+.nav-connector {
+    height:142px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.nav-connector-line {
+    width:100%;
+    height:2px;
+    background:#B7C8DA;
+    position:relative;
+}
+.nav-connector-line::after {
+    content:"";
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:#FFFFFF;
+    border:2px solid #8FA8C0;
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+}
+.nav-guide {
+    margin:14px 0 20px 0;
+    border-radius:16px;
+    background:linear-gradient(90deg,#F3F7FB,#FAFCFE);
+    border:1px solid #E7EDF3;
+    padding:13px 18px;
+    display:flex;
+    gap:13px;
+    align-items:center;
+    justify-content:center;
+    color:#71859D;
+    font-size:.84rem;
+    line-height:1.35;
+}
+.nav-guide-icon {
+    width:30px;
+    height:30px;
+    border:2px solid #8CA3BA;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+}
+
 @media (max-width: 1050px) {
     .summary-grid {grid-template-columns:1fr;}
     .brand-shell {grid-template-columns:130px minmax(0,1fr);}
 }
 @media (max-width: 900px) {
+    .st-key-study_nav [data-testid="stHorizontalBlock"] {gap:.45rem !important;}
+    .st-key-study_nav [data-testid="stButton"] > button {min-height:100px;font-size:.84rem;}
+    .st-key-study_nav [data-testid="stIconMaterial"] {font-size:1.9rem !important;}
+    .nav-connector {display:none;}
     .exec-grid {grid-template-columns:1fr;}
     .imp-grid {grid-template-columns:1fr;}
     .flow-wrap {grid-template-columns:1fr; gap:8px;}
@@ -1274,10 +1415,75 @@ if is_tendential:
         "Se muestra una lectura ajustada para reducir la variación asociada a bases pequeñas."
     )
 
-page = st.radio(
-    "¿Qué quieres explorar?",
-    ["Resumen", "Cómo se decide", "Qué pesa más", "Qué pasa si falta...", "Cómo ordenar el anaquel"],
-    horizontal=True,
+NAV_ITEMS = [
+    ("Resumen", ":material/bar_chart:", "Resumen"),
+    ("Cómo se decide", ":material/account_tree:", "Cómo se decide"),
+    ("Qué pesa más", ":material/diamond:", "Qué pesa más"),
+    ("Qué pasa si falta...", ":material/warning:", "Qué pasa si falta..."),
+    ("Cómo ordenar el anaquel", ":material/view_module:", "Cómo ordenar el anaquel"),
+]
+
+if "nav_page" not in st.session_state:
+    st.session_state["nav_page"] = "Resumen"
+
+st.markdown('<div class="nav-kicker">EXPLORA EL ESTUDIO</div>', unsafe_allow_html=True)
+st.markdown('<div class="nav-title">¿Qué quieres explorar?</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="nav-subtitle">Navega por los principales temas del estudio y descubre los hallazgos más relevantes.</div>',
+    unsafe_allow_html=True,
+)
+
+clicked_page = None
+with st.container(key="study_nav"):
+    nav_cols = st.columns([1, 0.12, 1, 0.12, 1, 0.12, 1, 0.12, 1], gap="small")
+
+    for idx, (page_name, page_icon, page_label) in enumerate(NAV_ITEMS):
+        col_idx = idx * 2
+        is_active = st.session_state["nav_page"] == page_name
+
+        with nav_cols[col_idx]:
+            if st.button(
+                page_label,
+                key=f"nav_card_{idx}",
+                icon=page_icon,
+                type="primary" if is_active else "secondary",
+                use_container_width=True,
+            ):
+                clicked_page = page_name
+
+            status = "ESTÁS AQUÍ" if is_active else str(idx + 1)
+            status_class = "nav-status active" if is_active else "nav-status"
+            st.markdown(
+                f'<div class="{status_class}">{status}</div>',
+                unsafe_allow_html=True,
+            )
+
+        if idx < len(NAV_ITEMS) - 1:
+            with nav_cols[col_idx + 1]:
+                st.markdown(
+                    '<div class="nav-connector"><div class="nav-connector-line"></div></div>',
+                    unsafe_allow_html=True,
+                )
+
+if clicked_page is not None and clicked_page != st.session_state["nav_page"]:
+    st.session_state["nav_page"] = clicked_page
+    st.rerun()
+
+page = st.session_state["nav_page"]
+
+st.markdown(
+    '''
+    <div class="nav-guide">
+      <div class="nav-guide-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="8" fill="none" stroke="#8098B0" stroke-width="1.7"/>
+          <path d="M14.8 9.2l-1.7 4-4 1.7 1.7-4 4-1.7z" fill="none" stroke="#8098B0" stroke-width="1.7" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>Cada sección te permite profundizar en el proceso de decisión, los factores de elección y las oportunidades en anaquel.</div>
+    </div>
+    ''',
+    unsafe_allow_html=True,
 )
 
 if page == "Resumen":
