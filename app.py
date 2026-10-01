@@ -1083,7 +1083,7 @@ meta = st.session_state["metadata"]
 
 with st.sidebar:
     st.success("Estudio abierto")
-        if st.button("Cerrar estudio", use_container_width=True):
+    if st.button("Cerrar estudio", use_container_width=True):
         clear_loaded_data()
         st.rerun()
     st.divider()
