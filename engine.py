@@ -347,13 +347,20 @@ def shelf_statistical_model(
         arr = np.vstack(boot_vals)
         low = np.quantile(arr, 0.025, axis=0)
         high = np.quantile(arr, 0.975, axis=0)
-        winners = np.argmax(arr, axis=1)
+        order = np.argsort(-arr, axis=1)
+        winners = order[:, 0]
+        top2 = order[:, : min(2, len(options))]
         stability = np.array([(winners == i).mean() for i in range(len(options))])
+        top2_prob = np.array([(top2 == i).any(axis=1).mean() for i in range(len(options))])
     else:
         low = est.copy()
         high = est.copy()
+        deterministic_order = np.argsort(-est)
         stability = np.zeros(len(options), dtype=float)
-        stability[int(np.argmax(est))] = 1.0
+        top2_prob = np.zeros(len(options), dtype=float)
+        stability[int(deterministic_order[0])] = 1.0
+        for i in deterministic_order[: min(2, len(options))]:
+            top2_prob[int(i)] = 1.0
 
     out = pd.DataFrame({
         "organizacion": options,
@@ -361,6 +368,7 @@ def shelf_statistical_model(
         "ic_bajo": low * 100,
         "ic_alto": high * 100,
         "estabilidad_top1": stability * 100,
+        "prob_top2": top2_prob * 100,
         "n": n,
     })
     return out.sort_values("prob_estimada", ascending=False).reset_index(drop=True)
