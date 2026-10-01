@@ -1310,8 +1310,8 @@ def decision_tree_figure(
     # Así cada nodo conserva una separación mínima en píxeles aunque cambie
     # el tamaño de la ventana, el nivel de detalle o la cantidad de ramas.
     cursor = 0.0
-    leaf_gap = 1.35
-    branch_gap = 0.90
+    leaf_gap = 1.05
+    branch_gap = 0.58
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1529,10 +1529,10 @@ def decision_tree_figure(
         showlegend=True,
     ))
 
-    # ~82 px por unidad vertical: una separación de 1.35 deja más de 100 px
-    # entre hojas. Esto evita que tarjetas de 50 px y textos de dos líneas se encimen.
-    vertical_span = max_y + 2.25
-    height = int(max(560, min(1800, 170 + vertical_span * 82)))
+    # Separación compacta pero segura: ~70 px entre hojas para tarjetas de 50 px.
+    # El gráfico crece sólo lo necesario para evitar encimados sin dejar huecos excesivos.
+    vertical_span = max_y + 2.05
+    height = int(max(540, min(1550, 165 + vertical_span * 68)))
 
     fig.update_layout(
         height=height,
@@ -1541,7 +1541,7 @@ def decision_tree_figure(
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
         # Rango invertido: encabezados arriba (-1.05) y ramas hacia abajo.
-        yaxis=dict(range=[max_y + 0.75, -1.55], visible=False, fixedrange=True),
+        yaxis=dict(range=[max_y + 0.55, -1.45], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
             orientation="h",
