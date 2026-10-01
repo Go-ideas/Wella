@@ -783,6 +783,150 @@ section[data-testid="stSidebar"] > div,
 .shelf-ease-copy{font-size:.78rem;line-height:1.35;color:#60778D}
 .shelf-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E;margin-top:10px}
 .shelf-insight b{color:#153A60}
+.shelf-visual-shell{
+    margin-top:14px;
+    border:1px solid #DCE6EF;
+    border-radius:18px;
+    background:linear-gradient(180deg,#FCFEFF 0%,#F7FAFD 100%);
+    padding:14px 14px 16px;
+}
+.shelf-visual-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+}
+.shelf-visual-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border-radius:999px;
+    padding:8px 12px;
+    background:#E8F3FC;
+    color:#155E98;
+    font-size:.76rem;
+    font-weight:800;
+}
+.shelf-visual-help{
+    font-size:.70rem;
+    color:#7B8FA4;
+    text-align:right;
+}
+.shelf-unit{
+    display:grid;
+    grid-template-columns:180px minmax(0,1fr);
+    gap:12px;
+    align-items:stretch;
+    margin:8px 0 0;
+}
+.shelf-unit-label{
+    border:1px solid #D5E4F0;
+    border-radius:14px;
+    background:#F2F8FE;
+    padding:11px 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.shelf-unit-label.secondary{background:#F8F6FF;border-color:#E2DDF8}
+.shelf-unit-label.support{background:#F8FAFC;border-color:#E3EAF0}
+.shelf-unit-num{
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex:0 0 auto;
+    background:#1D76BE;color:#fff;font-size:.72rem;font-weight:800;
+}
+.shelf-unit-label.secondary .shelf-unit-num{background:#6A5ACD}
+.shelf-unit-label.support .shelf-unit-num{background:#8497AA}
+.shelf-unit-main{
+    font-size:.76rem;
+    font-weight:800;
+    line-height:1.18;
+    color:#173A5E;
+}
+.shelf-unit-sub{
+    margin-top:3px;
+    font-size:.64rem;
+    line-height:1.25;
+    color:#7890A7;
+}
+.shelf-products{
+    position:relative;
+    border:1px solid #DCE6EF;
+    border-radius:14px 14px 8px 8px;
+    background:#FFFFFF;
+    padding:10px 12px 17px;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    align-items:end;
+    min-height:88px;
+    overflow:hidden;
+}
+.shelf-products::after{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:6px;height:7px;
+    background:linear-gradient(180deg,#DCE5EC,#C9D4DD);
+    border-radius:4px;
+    box-shadow:0 3px 8px rgba(40,75,105,.10);
+}
+.shelf-product{
+    position:relative;
+    z-index:1;
+    min-height:48px;
+    border-radius:10px 10px 4px 4px;
+    border:1px solid #D8E3ED;
+    background:linear-gradient(180deg,#F5F9FD,#E8F2FA);
+    padding:8px 7px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:.66rem;
+    line-height:1.18;
+    font-weight:700;
+    color:#31506D;
+}
+.shelf-products.secondary .shelf-product{
+    background:linear-gradient(180deg,#F9F7FF,#EEEAFE);
+    border-color:#E1DCF7;
+}
+.shelf-products.support .shelf-product{
+    background:linear-gradient(180deg,#FAFCFE,#F0F4F7);
+    border-color:#E0E8EF;
+}
+.shelf-visual-summary{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:1.2fr .8fr .8fr;
+    gap:10px;
+}
+.shelf-visual-summary-card{
+    border:1px solid #E2EAF2;
+    border-radius:13px;
+    background:#FFFFFF;
+    padding:10px 11px;
+}
+.shelf-visual-summary-label{
+    font-size:.64rem;
+    color:#7A8EA4;
+    line-height:1.2;
+}
+.shelf-visual-summary-value{
+    margin-top:4px;
+    font-size:.95rem;
+    font-weight:800;
+    color:#173A5E;
+}
+@media(max-width:900px){
+    .shelf-unit{grid-template-columns:1fr}
+    .shelf-products{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .shelf-visual-summary{grid-template-columns:1fr}
+    .shelf-visual-top{align-items:flex-start;flex-direction:column}
+    .shelf-visual-help{text-align:left}
+}
 @media(max-width:900px){
     .shelf-header{grid-template-columns:1fr}
     .shelf-top-grid,.shelf-kpi-grid{grid-template-columns:1fr}
@@ -3115,16 +3259,15 @@ elif page == "Cómo ordenar el anaquel":
         priority["valor"] = priority["indice_tendencial"]
         easy, barriers = friction_tendential(filtered, reference)
         easy_value = float(easy["tendencial"])
-        reading_label = "Lectura tendencial"
     else:
         priority = shelf_priority(filtered).copy()
         priority["valor"] = priority["indice_prioridad"]
         easy_value, barriers = friction_summary(filtered)
         easy_value = float(easy_value)
-        reading_label = "Selección actual"
 
     priority = priority.sort_values("valor", ascending=False).reset_index(drop=True)
     top3 = priority.head(3).copy()
+    opts = priority["organizacion"].tolist()
 
     st.markdown(
         f"""
@@ -3134,7 +3277,7 @@ elif page == "Cómo ordenar el anaquel":
             <div>
               <div class="shelf-header-kicker">Anaquel</div>
               <div class="shelf-header-title">Cómo facilitar la compra en anaquel</div>
-              <div class="shelf-header-sub">Identifica qué forma de organización ayuda más a encontrar rápido el producto y qué fricciones todavía permanecen.</div>
+              <div class="shelf-header-sub">Convierte las prioridades declaradas en una propuesta visual de organización del anaquel.</div>
             </div>
           </div>
           <div class="shelf-meta">
@@ -3161,6 +3304,133 @@ elif page == "Cómo ordenar el anaquel":
         )
     cards += '</div>'
     st.markdown(cards, unsafe_allow_html=True)
+
+    # --- Propuesta visual dinámica ---
+    with st.container(key="shelf_combo_panel", border=True):
+        st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="shelf-panel-sub">Elige la lógica principal y la secundaria; el esquema del anaquel se reorganiza automáticamente.</div>',
+            unsafe_allow_html=True,
+        )
+
+        left, right = st.columns(2)
+        primary = left.selectbox(
+            "Organizar primero por",
+            opts,
+            index=0,
+            key="shelf_primary",
+        )
+        sec_opts = [x for x in opts if x != primary]
+        secondary = right.selectbox(
+            "Después apoyar con",
+            sec_opts,
+            index=0,
+            key="shelf_secondary",
+        )
+
+        if is_tendential:
+            pair = shelf_pair_tendential(filtered, reference, primary, secondary)
+        else:
+            pair = shelf_pair_score(filtered, primary, secondary)
+
+        def _shelf_blocks(label: str) -> list[str]:
+            txt = str(label).lower()
+            if "necesidad" in txt:
+                return ["Cubrir canas", "Retocar raíz", "Cambiar look", "Mantener color"]
+            if "tipo de producto" in txt:
+                vals = (
+                    filtered["producto"].dropna().astype(str).value_counts().head(4).index.tolist()
+                    if "producto" in filtered.columns else []
+                )
+                return vals if vals else ["Tinte", "Retocador", "Matizador", "Decolorante"]
+            if "tono" in txt or "color" in txt:
+                return ["Rubio", "Castaño", "Negro", "Rojo / cobrizo"]
+            if "marca" in txt:
+                vals = (
+                    filtered["marca"].dropna().astype(str).value_counts().head(4).index.tolist()
+                    if "marca" in filtered.columns else []
+                )
+                return vals if vals else ["Marca 1", "Marca 2", "Marca 3", "Marca 4"]
+            if "precio" in txt or "promoción" in txt or "promocion" in txt:
+                return ["Precio visible", "Promoción", "Ahorro", "Comparación"]
+            if "beneficio" in txt:
+                return ["Cobertura", "Duración", "Menor daño", "Hidratación"]
+            if "señal" in txt or "guía" in txt or "guia" in txt:
+                return ["Guía rápida", "Código visual", "Señalización", "Ayuda"]
+            if "identificar" in txt:
+                return ["Necesidad visible", "Uso", "Beneficio clave", "Producto recomendado"]
+            return ["Zona 1", "Zona 2", "Zona 3", "Zona 4"]
+
+        primary_blocks = _shelf_blocks(primary)
+        secondary_blocks = _shelf_blocks(secondary)
+
+        support_rows = [x for x in opts if x not in {primary, secondary}][:2]
+        support_label = support_rows[0] if support_rows else "Señalización clara o guías"
+        support_blocks = _shelf_blocks(support_label)
+
+        def _blocks_html(items: list[str], css_class: str = "") -> str:
+            cells = "".join(
+                f'<div class="shelf-product">{html.escape(str(item))}</div>'
+                for item in items[:4]
+            )
+            return f'<div class="shelf-products {css_class}">{cells}</div>'
+
+        visual_html = (
+            '<div class="shelf-visual-shell">'
+            '<div class="shelf-visual-top">'
+            f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} Organización principal: {html.escape(primary)}</div>'
+            '<div class="shelf-visual-help">Esquema dinámico basado en A1/A2 y los filtros activos.</div>'
+            '</div>'
+            '<div class="shelf-unit">'
+            '<div class="shelf-unit-label">'
+            '<div class="shelf-unit-num">1</div>'
+            '<div>'
+            f'<div class="shelf-unit-main">{html.escape(primary)}</div>'
+            '<div class="shelf-unit-sub">Guía principal del anaquel</div>'
+            '</div></div>'
+            + _blocks_html(primary_blocks)
+            + '</div>'
+            '<div class="shelf-unit">'
+            '<div class="shelf-unit-label secondary">'
+            '<div class="shelf-unit-num">2</div>'
+            '<div>'
+            f'<div class="shelf-unit-main">{html.escape(secondary)}</div>'
+            '<div class="shelf-unit-sub">Apoyo para afinar la elección</div>'
+            '</div></div>'
+            + _blocks_html(secondary_blocks, "secondary")
+            + '</div>'
+            '<div class="shelf-unit">'
+            '<div class="shelf-unit-label support">'
+            '<div class="shelf-unit-num">+</div>'
+            '<div>'
+            f'<div class="shelf-unit-main">{html.escape(support_label)}</div>'
+            '<div class="shelf-unit-sub">Capa de apoyo y señalización</div>'
+            '</div></div>'
+            + _blocks_html(support_blocks, "support")
+            + '</div>'
+            '<div class="shelf-visual-summary">'
+            '<div class="shelf-visual-summary-card">'
+            '<div class="shelf-visual-summary-label">Cobertura: al menos una de las dos ayudas aparece en el Top 2</div>'
+            f'<div class="shelf-visual-summary-value">{float(pair["coverage"]):.1f}%</div>'
+            '</div>'
+            '<div class="shelf-visual-summary-card">'
+            '<div class="shelf-visual-summary-label">Ambas entre las 2 principales</div>'
+            f'<div class="shelf-visual-summary-value">{float(pair["top2_any_order"]):.1f}%</div>'
+            '</div>'
+            '<div class="shelf-visual-summary-card">'
+            '<div class="shelf-visual-summary-label">Orden exacto seleccionado</div>'
+            f'<div class="shelf-visual-summary-value">{float(pair["exact_order"]):.1f}%</div>'
+            '</div>'
+            '</div>'
+            '</div>'
+        )
+        st.markdown(visual_html, unsafe_allow_html=True)
+
+        st.markdown(
+            f'<div class="shelf-insight">La propuesta <b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> '
+            f'cubre al menos una de las dos ayudas para <b>{float(pair["coverage"]):.1f}%</b> de los compradores.</div>',
+            unsafe_allow_html=True,
+        )
 
     with st.container(key="shelf_rank_panel", border=True):
         st.markdown('<div class="shelf-panel-title">Ranking de organización</div>', unsafe_allow_html=True)
@@ -3192,61 +3462,6 @@ elif page == "Cómo ordenar el anaquel":
         fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False)
         st.plotly_chart(fig, use_container_width=True)
         st.caption("El índice combina lo que las personas mencionaron como primera y segunda ayuda para navegar el anaquel.")
-
-    opts = priority["organizacion"].tolist()
-
-    with st.container(key="shelf_combo_panel", border=True):
-        st.markdown('<div class="shelf-panel-title">Prueba una organización de anaquel</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="shelf-panel-sub">Selecciona qué debería guiar primero y qué debería apoyar después.</div>',
-            unsafe_allow_html=True,
-        )
-
-        left, right = st.columns(2)
-        primary = left.selectbox(
-            "Organizar primero por",
-            opts,
-            index=0,
-            key="shelf_primary",
-        )
-        sec_opts = [x for x in opts if x != primary]
-        secondary = right.selectbox(
-            "Después apoyar con",
-            sec_opts,
-            index=0,
-            key="shelf_secondary",
-        )
-
-        if is_tendential:
-            pair = shelf_pair_tendential(filtered, reference, primary, secondary)
-        else:
-            pair = shelf_pair_score(filtered, primary, secondary)
-
-        st.markdown(
-            f"""
-            <div class="shelf-kpi-grid">
-              <div class="shelf-kpi">
-                <div class="shelf-kpi-label">Orden exacto: primero {html.escape(primary)}, después {html.escape(secondary)}</div>
-                <div class="shelf-kpi-value">{float(pair["exact_order"]):.1f}%</div>
-              </div>
-              <div class="shelf-kpi">
-                <div class="shelf-kpi-label">Ambas aparecen entre las 2 principales, sin importar el orden</div>
-                <div class="shelf-kpi-value">{float(pair["top2_any_order"]):.1f}%</div>
-              </div>
-              <div class="shelf-kpi">
-                <div class="shelf-kpi-label">Al menos una de estas dos ayudas aparece en el Top 2</div>
-                <div class="shelf-kpi-value">{float(pair["coverage"]):.1f}%</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f'<div class="shelf-insight">La combinación <b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> '
-            f'cubre al menos una de las dos ayudas para <b>{float(pair["coverage"]):.1f}%</b> de los compradores.</div>',
-            unsafe_allow_html=True,
-        )
 
     with st.container(key="shelf_friction_panel", border=True):
         st.markdown('<div class="shelf-panel-title">Fricción real al encontrar el producto</div>', unsafe_allow_html=True)
@@ -3302,7 +3517,7 @@ elif page == "Cómo ordenar el anaquel":
                 unsafe_allow_html=True,
             )
 
-    st.caption("A1 y A2 identifican qué ayudaría primero y después a navegar el anaquel; E1 y E2 muestran qué tan fácil fue encontrar el producto y qué lo dificultó.")
+    st.caption("El anaquel visual es un esquema analítico: traduce A1/A2 en una propuesta de organización y E1/E2 en fricciones observadas; no representa un planograma físico final.")
 
 
 st.markdown(
