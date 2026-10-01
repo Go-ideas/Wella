@@ -2626,6 +2626,8 @@ elif page == "Cómo se decide":
             unsafe_allow_html=True,
         )
 
+# LOCKED SECTION — DRIVERS CLAVE
+# Versión final aprobada por el usuario el 2026-10-01. No modificar sin solicitud explícita.
 elif page == "Qué pesa más":
     # ===== Drivers clave · MaxDiff =====
     if is_tendential:
