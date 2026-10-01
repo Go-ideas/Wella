@@ -2305,7 +2305,7 @@ if page == "Resumen":
     )
 
 # LOCKED SECTION — DECISIÓN DE COMPRA
-# Aprobado por el usuario el 2026-10-01. No modificar sin solicitud explícita.
+# Versión final aprobada por el usuario el 2026-10-01. No modificar sin solicitud explícita.
 elif page == "Cómo se decide":
     base_reference = reference if is_tendential else filtered
     k_decision = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
