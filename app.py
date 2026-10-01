@@ -1095,6 +1095,9 @@ def icon_svg(kind: str, stroke: str = "#1D5E9E") -> str:
         "warning": '<path d="M12 4l8 15H4L12 4zM12 9v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
         "route": '<path d="M6 5a2 2 0 1 0 0 .1M6 7v5c0 2 1 3 3 3h6M18 13a2 2 0 1 0 0 .1M18 15v4M18 19a2 2 0 1 0 0 .1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
         "grid": '<rect x="4" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="14" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+        "brand_missing": '<path d="M4 11V5h6l9 9-5 5-10-8zM8 8h.01M9.5 14.5l5-5M10 10l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>',
+        "tone_missing": '<path d="M12 3c3.8 4.3 6 7.1 6 10a6 6 0 0 1-12 0c0-2.9 2.2-5.7 6-10zM8.7 13.6c.8 1.7 2 2.5 3.6 2.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+        "promo_missing": '<path d="M4 11V5h6l9 9-5 5-10-8zM8 8h.01M9 15l6-6M10 10h.01M14 14h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>',
     }
     body = paths.get(kind, paths["chart"])
     return (
@@ -2952,21 +2955,21 @@ elif page == "Qué pasa si falta...":
         '<div class="risk-kpi-grid">'
         '<div class="risk-kpi-card">'
         '<div><div class="risk-kpi-top">'
-        f'<div class="risk-kpi-icon" style="background:#FFF1F3">{icon_svg("swap", "#C7435B")}</div>'
+        f'<div class="risk-kpi-icon" style="background:#FFF1F3">{icon_svg("brand_missing", "#C7435B")}</div>'
         '<div class="risk-kpi-label">Si falta la marca</div></div>'
         f'<div class="risk-kpi-value">{brand_risk:.1f}%</div>'
         '<div class="risk-kpi-note">cambiaría a otra marca en lugar de conservar la marca buscada.</div></div>'
         '</div>'
         '<div class="risk-kpi-card">'
         '<div><div class="risk-kpi-top">'
-        f'<div class="risk-kpi-icon" style="background:#FFF6E9">{icon_svg("hair", "#C77A19")}</div>'
+        f'<div class="risk-kpi-icon" style="background:#FFF6E9">{icon_svg("tone_missing", "#C77A19")}</div>'
         f'<div class="risk-kpi-label">Si falta su {html.escape(language["short"])}</div></div>'
         f'<div class="risk-kpi-value">{tone_risk:.1f}%</div>'
         f'<div class="risk-kpi-note">cambiaría de marca para conservar el {html.escape(language["concept"])} que busca.</div></div>'
         '</div>'
         '<div class="risk-kpi-card">'
         '<div><div class="risk-kpi-top">'
-        f'<div class="risk-kpi-icon" style="background:#EAF7F0">{icon_svg("check", "#237A4B")}</div>'
+        f'<div class="risk-kpi-icon" style="background:#EAF7F0">{icon_svg("promo_missing", "#237A4B")}</div>'
         '<div class="risk-kpi-label">Sin promoción</div></div>'
         f'<div class="risk-kpi-value">{promo_resilience:.1f}%</div>'
         '<div class="risk-kpi-note">compraría el producto de todos modos; indica resiliencia frente a la promoción.</div></div>'
@@ -2976,27 +2979,18 @@ elif page == "Qué pasa si falta...":
     )
 
     with st.container(key="risk_sim_panel", border=True):
-        st.markdown('<div class="risk-panel-title">Simula una situación de riesgo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="risk-panel-title">Explora una situación de riesgo</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="risk-panel-sub">Selecciona el escenario y traduce el patrón observado a un número concreto de compradores.</div>',
+            '<div class="risk-panel-sub">Selecciona el escenario para ver cómo reaccionan los compradores ante la falta de una condición esperada.</div>',
             unsafe_allow_html=True,
         )
 
-        c1, c2 = st.columns([1.35, .65])
-        with c1:
-            scenario_display = st.segmented_control(
-                "Escenario",
-                options=["Marca no disponible", language["missing"], "Sin promoción"],
-                default="Marca no disponible",
-                key="risk_scenario",
-            )
-        with c2:
-            sim_n = st.select_slider(
-                "Compradores a visualizar",
-                options=[100, 250, 500, 1000, 2500, 5000],
-                value=1000,
-                key="risk_sim_n",
-            )
+        scenario_display = st.segmented_control(
+            "Escenario",
+            options=["Marca no disponible", language["missing"], "Sin promoción"],
+            default="Marca no disponible",
+            key="risk_scenario",
+        )
 
         scenario = (
             "Tono/color no disponible"
@@ -3008,19 +3002,11 @@ elif page == "Qué pasa si falta...":
             t = substitution_tendential(filtered, reference, scenario).copy()
             t["porcentaje"] = t["tendencial"]
         else:
-            t = scenario_counts(filtered, scenario, sim_n).copy()
+            t = scenario_counts(filtered, scenario, 1000).copy()
             t["porcentaje"] = t["pct"]
 
-        if is_tendential:
-            t["esperados"] = (t["porcentaje"] * sim_n / 100).round().astype(int)
-        elif "esperados" not in t.columns:
-            t["esperados"] = (t["porcentaje"] * sim_n / 100).round().astype(int)
-
         t = t.sort_values("porcentaje", ascending=False).reset_index(drop=True)
-        t["etiqueta"] = t.apply(
-            lambda r: f"{float(r['porcentaje']):.1f}% · {int(r['esperados'])}",
-            axis=1,
-        )
+        t["etiqueta"] = t["porcentaje"].map(lambda x: f"{float(x):.1f}%")
 
         fig = px.bar(
             t.sort_values("porcentaje"),
@@ -3047,22 +3033,20 @@ elif page == "Qué pasa si falta...":
             lead = t.iloc[0]
             lead_label = str(lead["respuesta"])
             lead_pct = float(lead["porcentaje"])
-            lead_n = int(lead["esperados"])
-
             if scenario == "Marca no disponible":
                 context = (
                     f"Ante la falta de marca, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
-                    f"({lead_pct:.1f}%, equivalente a {lead_n} de cada {sim_n:,} compradores)."
+                    f"({lead_pct:.1f}%)."
                 )
             elif scenario == "Tono/color no disponible":
                 context = (
                     f"Si falta el {html.escape(language['concept'])}, la reacción dominante es "
-                    f"<b>{html.escape(lead_label)}</b> ({lead_pct:.1f}%, {lead_n} de cada {sim_n:,})."
+                    f"<b>{html.escape(lead_label)}</b> ({lead_pct:.1f}%)."
                 )
             else:
                 context = (
                     f"Sin promoción, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
-                    f"({lead_pct:.1f}%, {lead_n} de cada {sim_n:,})."
+                    f"({lead_pct:.1f}%)."
                 )
 
             st.markdown(
@@ -3070,7 +3054,7 @@ elif page == "Qué pasa si falta...":
                 unsafe_allow_html=True,
             )
 
-    st.caption("La simulación traduce los porcentajes observados a un número equivalente de compradores; no es una proyección de ventas.")
+    st.caption("Los porcentajes describen la reacción declarada ante cada escenario; no representan una proyección de ventas.")
 
 elif page == "Cómo ordenar el anaquel":
     st.markdown("### Cómo facilitar la compra en anaquel")
