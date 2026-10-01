@@ -1308,8 +1308,8 @@ def decision_tree_figure(
 
     # Posicionamiento vertical a partir de las hojas.
     cursor = 0.0
-    leaf_gap = 1.0
-    branch_gap = 0.45
+    leaf_gap = 1.15
+    branch_gap = 0.62
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1535,7 +1535,9 @@ def decision_tree_figure(
         for d1 in branches
         for d2 in d1["children"]
     )
-    height = min(940, max(540, 300 + leaf_count * 78))
+    d1_count = max(1, len(branches))
+    # Amplio necesita más aire vertical: el alto depende de hojas y puntos de partida.
+    height = min(1320, max(560, 320 + leaf_count * 92 + max(0, d1_count - 3) * 70))
 
     fig.update_layout(
         height=height,
@@ -2309,7 +2311,7 @@ elif page == "Cómo se decide":
                 start_options,
                 index=0,
                 key="decision_start_from",
-                help="Selecciona un criterio para iniciar el árbol desde ese primer paso, o deja Todos para conservar la vista completa.",
+                help="Todos conserva el árbol completo. Si eliges un criterio, el árbol comienza desde ese primer paso.",
             )
 
     if detail == "Simple":
@@ -2376,7 +2378,7 @@ elif page == "Cómo se decide":
             unsafe_allow_html=True,
         )
 
-        r1, r2, r3 = st.columns([1.2, 1.2, .8])
+        r1, r2 = st.columns([1.0, 1.0])
 
         with r1:
             if second_options:
@@ -2424,24 +2426,11 @@ elif page == "Cómo se decide":
                 selected_third = "—"
                 selected_third_pct = 0.0
 
-        with r3:
-            focus_branch = st.toggle(
-                "Solo esta rama",
-                value=False,
-                key="decision_focus_branch",
-                help="Oculta los demás puntos de partida y concentra el árbol en la ruta que estás explorando.",
-            )
-
     highlight_path = (selected_first, selected_second, selected_third)
 
-    # Si el cliente seleccionó un inicio específico, el árbol comienza desde ahí.
-    # Si dejó Todos, conserva el contexto completo; en exploración puede aislar la rama con el toggle.
-    if start_from != "Todos":
-        first_choice_for_tree = selected_first
-    elif explore_mode == "Explorar una ruta" and focus_branch:
-        first_choice_for_tree = selected_first
-    else:
-        first_choice_for_tree = None
+    # "Comenzar desde" controla realmente el punto de arranque del árbol.
+    # Todos = contexto completo; una opción específica = árbol enfocado desde ese D1.
+    first_choice_for_tree = selected_first if start_from != "Todos" else None
 
     with st.container(key="decision_tree_panel", border=True):
         st.markdown(
