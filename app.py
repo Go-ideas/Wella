@@ -1284,11 +1284,6 @@ if page == "Resumen":
         unsafe_allow_html=True,
     )
 
-    st.caption(
-        "Fidelidad visual vs referencia: el indicador compara estructura, jerarquía, distribución, paleta, iconografía y presencia de los bloques clave. "
-        "No es una comparación pixel a pixel porque el dashboard es responsivo y sus datos cambian con los filtros."
-    )
-
 elif page == "Cómo se decide":
     st.markdown("### Árbol de decisión")
     st.caption(
