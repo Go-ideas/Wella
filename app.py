@@ -3457,17 +3457,18 @@ elif page == "Cómo ordenar el anaquel":
 
     st.markdown(
         f'<div class="shelf-prob-explainer">{icon_svg("chart", "#1D6FB5")}'
-        '<div><div class="shelf-prob-explainer-main"><b>Probabilidad ajustada:</b> indica en cuántas '
-        'remuestras estadísticas una opción se mantiene entre las <b>2 mejores formas de organizar el anaquel</b>.</div>'
-        '<div class="shelf-prob-explainer-note">Se calcula con bootstrap y suavización estadística para reducir el efecto del ruido muestral. '
-        'No representa porcentaje de compradores.</div></div></div>',
+        '<div><div class="shelf-prob-explainer-main"><b>Nivel de recomendación:</b> es un índice de 0 a 100 que resume '
+        'qué tan conveniente resulta cada forma de organizar el anaquel en el corte actual.</div>'
+        '<div class="shelf-prob-explainer-note">Combina fuerza relativa del modelo y consistencia estadística. '
+        '100 identifica la alternativa más sólida del corte; no es porcentaje de compradores.</div></div></div>',
         unsafe_allow_html=True,
     )
 
     cards = '<div class="shelf-top-grid">'
     for rank, (_, row) in enumerate(top3.iterrows(), start=1):
-        stability = float(row["estabilidad_top1"])
-        top2_prob = float(row.get("prob_top2", 0.0))
+        recommendation = float(row["nivel_recomendacion"])
+        consistency = float(row["consistencia"])
+        relative_pref = float(row["preferencia_relativa"])
         cards += (
             '<div class="shelf-top-card">'
             '<div class="shelf-card-topline">'
@@ -3477,11 +3478,11 @@ elif page == "Cómo ordenar el anaquel":
             f'<div class="shelf-card-kicker">{"Recomendación principal" if rank == 1 else f"Alternativa #{rank}"}</div>'
             f'<div class="shelf-card-name">{html.escape(str(row["organizacion"]))}</div>'
             '</div></div>'
-            f'<div class="shelf-card-value">{top2_prob:.0f}%</div>'
+            f'<div class="shelf-card-value">{recommendation:.0f}<span style="font-size:.58em">/100</span></div>'
             '</div>'
             '<div class="shelf-card-metrics">'
-            f'<div class="shelf-card-chip">Ser #1 <strong>{stability:.0f}%</strong></div>'
-            f'<div class="shelf-card-chip">Preferencia modelada <strong>{float(row["prob_estimada"]):.1f}%</strong></div>'
+            f'<div class="shelf-card-chip">Consistencia <strong>{consistency:.0f}/100</strong></div>'
+            f'<div class="shelf-card-chip">Fuerza relativa <strong>{relative_pref:.0f}/100</strong></div>'
             '</div>'
             '</div>'
         )
@@ -3543,7 +3544,9 @@ elif page == "Cómo ordenar el anaquel":
         primary_low = float(selected_primary_row.iloc[0]["ic_bajo"]) if len(selected_primary_row) else 0.0
         primary_high = float(selected_primary_row.iloc[0]["ic_alto"]) if len(selected_primary_row) else 0.0
         primary_stability = float(selected_primary_row.iloc[0]["estabilidad_top1"]) if len(selected_primary_row) else 0.0
-        primary_top2 = float(selected_primary_row.iloc[0]["prob_top2"]) if len(selected_primary_row) else 0.0
+        primary_level = float(selected_primary_row.iloc[0]["nivel_recomendacion"]) if len(selected_primary_row) else 0.0
+        primary_consistency = float(selected_primary_row.iloc[0]["consistencia"]) if len(selected_primary_row) else 0.0
+        primary_relative = float(selected_primary_row.iloc[0]["preferencia_relativa"]) if len(selected_primary_row) else 0.0
 
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
@@ -3607,7 +3610,7 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-visual-top">'
             '<div class="shelf-reco-summary">'
             f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} Recomendación: {html.escape(primary)} → {html.escape(secondary)}</div>'
-            f'<div class="shelf-confidence-pill">Probabilidad ajustada Top 2: {primary_top2:.0f}%</div>'
+            f'<div class="shelf-confidence-pill">Nivel de recomendación: {primary_level:.0f}/100</div>'
             '</div>'
             '<div class="shelf-visual-help">Cambia automáticamente con los filtros y el modo seleccionado.</div>'
             '</div>'
@@ -3631,11 +3634,10 @@ elif page == "Cómo ordenar el anaquel":
             + '</div>'
             '<div class="shelf-stat-grid">'
             '<div class="shelf-stat-card primary">'
-            '<div class="shelf-stat-label">Probabilidad ajustada de recomendación</div>'
-            f'<div class="shelf-stat-value">{primary_top2:.0f}%</div>'
-            f'<div class="shelf-stat-note">{html.escape(primary)} se mantiene entre las 2 mejores alternativas en '
-            f'{primary_top2:.0f} de cada 100 remuestras estadísticas.</div>'
-            f'<div class="shelf-stat-status">Como #1: {primary_stability:.0f}% · Preferencia modelada: {primary_prob:.1f}%</div>'
+            '<div class="shelf-stat-label">Nivel de recomendación</div>'
+            f'<div class="shelf-stat-value">{primary_level:.0f}<span style="font-size:.58em">/100</span></div>'
+            f'<div class="shelf-stat-note">Resume qué tan fuerte y consistente es {html.escape(primary)} frente al resto de alternativas del corte actual.</div>'
+            f'<div class="shelf-stat-status">Consistencia: {primary_consistency:.0f}/100 · Fuerza relativa: {primary_relative:.0f}/100</div>'
             '</div>'
             '<div class="shelf-stat-card secondary">'
             '<div class="shelf-stat-label">Siguiente paso recomendado</div>'
@@ -3659,9 +3661,8 @@ elif page == "Cómo ordenar el anaquel":
             st.markdown(
                 f'<div class="shelf-insight"><b>Lectura recomendada:</b> organizar primero por '
                 f'<b>{html.escape(primary)}</b> y después apoyar con <b>{html.escape(secondary)}</b>. '
-                f'<b>{html.escape(primary)}</b> permanece entre las 2 mejores alternativas en '
-                f'<b>{primary_top2:.0f}%</b> de las remuestras estadísticas y como #1 en '
-                f'<b>{primary_stability:.0f}%</b>.</div>',
+                f'La primera capa alcanza un <b>nivel de recomendación de {primary_level:.0f}/100</b>, '
+                f'con consistencia de <b>{primary_consistency:.0f}/100</b>.</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -3684,13 +3685,13 @@ elif page == "Cómo ordenar el anaquel":
         with rh2:
             rank_view = st.segmented_control(
                 "Lectura",
-                options=["Probabilidad ajustada", "Preferencia modelada"],
-                default="Probabilidad ajustada",
+                options=["Nivel de recomendación", "Detalle técnico"],
+                default="Nivel de recomendación",
                 key="shelf_rank_view",
             )
 
-        if rank_view == "Probabilidad ajustada":
-            ranked_plot = stat_rank.sort_values("prob_top2", ascending=True).copy()
+        if rank_view == "Nivel de recomendación":
+            ranked_plot = stat_rank.sort_values("nivel_recomendacion", ascending=True).copy()
         else:
             ranked_plot = stat_rank.sort_values("prob_estimada", ascending=True).copy()
         top_org = str(stat_rank.iloc[0]["organizacion"]) if len(stat_rank) else ""
@@ -3699,22 +3700,23 @@ elif page == "Cómo ordenar el anaquel":
             for org in ranked_plot["organizacion"]
         ]
 
-        if rank_view == "Probabilidad ajustada":
+        if rank_view == "Nivel de recomendación":
             fig = go.Figure(
                 go.Bar(
-                    x=ranked_plot["prob_top2"],
+                    x=ranked_plot["nivel_recomendacion"],
                     y=ranked_plot["organizacion"],
                     orientation="h",
-                    text=ranked_plot["prob_top2"].map(lambda x: f"{float(x):.0f}%"),
+                    text=ranked_plot["nivel_recomendacion"].map(lambda x: f"{float(x):.0f}"),
                     textposition="outside",
                     marker=dict(color=bar_colors),
                     hovertemplate=(
                         "<b>%{y}</b><br>"
-                        "Probabilidad ajustada Top 2: %{x:.0f}%<br>"
-                        "Probabilidad de ser #1: %{customdata[0]:.0f}%<br>"
-                        "Preferencia modelada: %{customdata[1]:.1f}%<extra></extra>"
+                        "Nivel de recomendación: %{x:.0f}/100<br>"
+                        "Consistencia: %{customdata[0]:.0f}/100<br>"
+                        "Fuerza relativa: %{customdata[1]:.0f}/100<br>"
+                        "Posición media en remuestreo: %{customdata[2]:.2f}<extra></extra>"
                     ),
-                    customdata=ranked_plot[["estabilidad_top1", "prob_estimada"]].to_numpy(),
+                    customdata=ranked_plot[["consistencia", "preferencia_relativa", "posicion_media"]].to_numpy(),
                 )
             )
             max_rank = 100.0
@@ -3754,23 +3756,29 @@ elif page == "Cómo ordenar el anaquel":
             plot_bgcolor="white",
             paper_bgcolor="white",
             xaxis=dict(
-                range=[0, 100] if rank_view == "Probabilidad ajustada"
+                range=[0, 105] if rank_view == "Nivel de recomendación"
                 else [0, min(100, max_rank * 1.18 if max_rank > 0 else 1)]
             ),
             yaxis=dict(title=""),
         )
-        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
+        fig.update_xaxes(
+            showgrid=True,
+            gridcolor="#E8EDF3",
+            zeroline=False,
+            ticksuffix="" if rank_view == "Nivel de recomendación" else "%",
+            title="Nivel de recomendación (0–100)" if rank_view == "Nivel de recomendación" else "Preferencia modelada"
+        )
         st.plotly_chart(fig, use_container_width=True)
-        if rank_view == "Probabilidad ajustada":
-            st.caption("Probabilidad ajustada = porcentaje de remuestras estadísticas en que la opción permanece dentro del Top 2. No es porcentaje de compradores.")
+        if rank_view == "Nivel de recomendación":
+            st.caption("Nivel de recomendación: índice relativo de 0 a 100. Combina fuerza del modelo y consistencia estadística; 100 identifica la alternativa más sólida del corte actual.")
         else:
-            st.caption("La barra azul oscura identifica la recomendación principal; las líneas muestran el rango de incertidumbre al 95%.")
+            st.caption("Detalle técnico: la barra muestra la preferencia modelada y las líneas el rango de incertidumbre al 95%.")
 
         with st.expander("Ver metodología y lectura descriptiva A1/A2"):
             st.markdown(
                 "La recomendación usa un modelo **Plackett–Luce** sobre el ranking A1→A2. "
-                "La **probabilidad ajustada** se define como la proporción de remuestras bootstrap en las que una opción permanece dentro de las 2 mejores. "
-                "La probabilidad de ser #1 se reporta por separado. "
+                "El **nivel de recomendación (0–100)** combina 65% de fuerza relativa del modelo y 35% de consistencia de posición en bootstrap, y se reescala para que el líder del corte valga 100. "
+                "La preferencia modelada, los intervalos al 95% y la estabilidad como #1 quedan disponibles como detalle técnico. "
                 "Cuando la base filtrada es pequeña, se aplica **partial pooling** hacia el total para reducir ruido."
             )
             desc = raw_priority[["organizacion", "valor_descriptivo"]].rename(
