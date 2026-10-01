@@ -156,7 +156,154 @@ st.markdown(
     font-size:1.8rem;
     font-weight:300;
 }
+.exec-grid {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:16px;
+    margin:8px 0 20px 0;
+}
+.exec-card {
+    border:1px solid #DCE5EE;
+    border-radius:20px;
+    background:#FFFFFF;
+    padding:18px 18px 16px 18px;
+    min-height:270px;
+}
+.exec-head {
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:14px;
+}
+.exec-icon {
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+}
+.exec-title {
+    font-size:0.88rem;
+    font-weight:800;
+    color:#173A5E;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    line-height:1.25;
+}
+.exec-subtitle {
+    font-size:.82rem;
+    color:#6B7C93;
+    line-height:1.35;
+    margin-top:4px;
+}
+.rank-row {
+    display:grid;
+    grid-template-columns:30px minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    padding:9px 0;
+    border-top:1px solid #EDF1F5;
+}
+.rank-badge {
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:.82rem;
+}
+.rank-label {
+    font-size:.94rem;
+    color:#17324E;
+    font-weight:600;
+    line-height:1.25;
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+.rank-value {
+    font-size:1.02rem;
+    color:#0C3762;
+    font-weight:800;
+    white-space:nowrap;
+}
+.section-card {
+    border:1px solid #DCE5EE;
+    border-radius:20px;
+    background:#FFFFFF;
+    padding:18px;
+    height:100%;
+}
+.section-title {
+    font-size:1.15rem;
+    color:#153A60;
+    font-weight:800;
+    margin-bottom:4px;
+}
+.section-sub {
+    font-size:.84rem;
+    color:#728096;
+    margin-bottom:10px;
+    line-height:1.35;
+}
+.insight-callout {
+    margin-top:12px;
+    border-radius:14px;
+    padding:12px 14px;
+    background:#F5F9FD;
+    color:#173A5E;
+    font-size:.88rem;
+    line-height:1.4;
+    border:1px solid #E2EBF3;
+}
+.implications {
+    margin-top:18px;
+    border-radius:20px;
+    background:linear-gradient(135deg,#0A2A4A,#153F6A);
+    padding:18px;
+    color:#FFFFFF;
+}
+.implications-title {
+    font-size:1.12rem;
+    font-weight:800;
+    margin-bottom:12px;
+}
+.imp-grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+}
+.imp-card {
+    border-radius:16px;
+    background:rgba(255,255,255,.96);
+    color:#17324E;
+    padding:15px;
+    min-height:120px;
+}
+.imp-kicker {
+    font-size:.8rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:6px;
+}
+.imp-main {
+    font-size:1rem;
+    font-weight:800;
+    line-height:1.3;
+}
+.imp-note {
+    font-size:.82rem;
+    color:#64748B;
+    line-height:1.35;
+    margin-top:6px;
+}
 @media (max-width: 900px) {
+    .exec-grid {grid-template-columns:1fr;}
+    .imp-grid {grid-template-columns:1fr;}
     .flow-wrap {grid-template-columns:1fr; gap:8px;}
     .flow-arrow {transform:rotate(90deg); min-height:24px;}
 }
@@ -167,7 +314,7 @@ st.markdown(
 
 st.markdown(
     '<div class="hero"><h2>Wella · Explorador de decisión de compra</h2>'
-    '<p>Carga el archivo seguro y explora cómo deciden los compradores, qué pesa más en la elección y qué pasa cuando una opción no está disponible.</p></div>',
+    '<p>Una visión visual de cómo se decide, qué genera valor y qué puede cambiar la elección.</p></div>',
     unsafe_allow_html=True,
 )
 
@@ -217,6 +364,56 @@ def kpi_card(label: str, value: str, note: str | None = None):
         f'{note_html}'
         f'</div>',
         unsafe_allow_html=True,
+    )
+
+
+def icon_svg(kind: str, stroke: str = "#1D5E9E") -> str:
+    """Inline SVG icons so the dashboard needs no external image files."""
+    paths = {
+        "hair": '<path d="M8 18c1-6 3-10 8-12 5 2 7 6 8 12M10 18c1-4 2-7 6-9 4 2 5 5 6 9M13 19c0-4 1-6 3-8 2 2 3 4 3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+        "diamond": '<path d="M5 9l3-4h8l3 4-7 10L5 9zM8 5l4 14 4-14M5 9h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+        "check": '<path d="M6 12l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>',
+        "swap": '<path d="M5 8h11l-3-3m3 3-3 3M19 16H8l3 3m-3-3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+        "tag": '<path d="M4 11V5h6l9 9-5 5-10-8zM8 8h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>',
+        "shield": '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3zM9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+        "megaphone": '<path d="M4 13h4l8 4V7l-8 4H4v2zM8 13l1 5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+        "chart": '<path d="M5 18V9h3v9H5zm6 0V5h3v13h-3zm6 0v-6h3v6h-3z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    }
+    body = paths.get(kind, paths["chart"])
+    return (
+        f'<svg width="28" height="28" viewBox="0 0 24 24" '
+        f'style="color:{stroke};display:block" aria-hidden="true">{body}</svg>'
+    )
+
+
+def executive_stage_card(
+    step: int,
+    title: str,
+    subtitle: str,
+    rows: list[tuple[str, float]],
+    icon: str,
+    accent: str,
+    bg: str,
+) -> str:
+    rank_html = ""
+    for idx, (label, value) in enumerate(rows[:3], start=1):
+        rank_html += (
+            '<div class="rank-row">'
+            f'<div class="rank-badge" style="background:{bg};color:{accent}">{idx}</div>'
+            f'<div class="rank-label">{html.escape(str(label))}</div>'
+            f'<div class="rank-value">{value:.1f}%</div>'
+            '</div>'
+        )
+    return (
+        '<div class="exec-card">'
+        '<div class="exec-head">'
+        f'<div class="exec-icon" style="background:{bg};color:{accent}">{icon_svg(icon, accent)}</div>'
+        '<div>'
+        f'<div class="exec-title">{step} · {html.escape(title)}</div>'
+        f'<div class="exec-subtitle">{html.escape(subtitle)}</div>'
+        '</div></div>'
+        f'{rank_html}'
+        '</div>'
     )
 
 
@@ -695,9 +892,14 @@ page = st.radio(
 )
 
 if page == "Resumen":
-    st.markdown("### Resumen de la compra")
-    st.caption("Una lectura rápida de cómo se toma la decisión y qué tan fácil es cambiar de opción.")
+    st.markdown("### Resumen ejecutivo")
+    st.caption("Una lectura rápida de qué consideran, qué genera valor y qué puede cambiar su elección.")
     k = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
+
+    if is_tendential:
+        stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
+    else:
+        stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
 
     st.markdown(
         f'<div class="base-strip">'
@@ -708,41 +910,156 @@ if page == "Resumen":
         unsafe_allow_html=True,
     )
 
-    first_value = html.escape(str(k["primer_gate"] or "—"))
-    driver_value = html.escape(str(k["top_driver"] or "—"))
-    validation_value = f'{k["validacion_arbol"]:.1f}%'
+    stage_map = {}
+    for stage_name in ["Primero", "Después", "Cierre"]:
+        temp = (
+            stage[stage["etapa"] == stage_name]
+            .sort_values("porcentaje", ascending=False)
+            .head(3)
+        )
+        stage_map[stage_name] = [
+            (str(r["criterio"]), float(r["porcentaje"])) for _, r in temp.iterrows()
+        ]
 
-    st.markdown(
-        f'<div class="flow-wrap">'
-        f'<div class="flow-step">'
-        f'<div class="flow-kicker">1 · Lo primero que se decide</div>'
-        f'<div class="flow-value">{first_value}</div>'
-        f'<div class="flow-note">Es el criterio que aparece primero al comenzar la elección.</div>'
-        f'</div>'
-        f'<div class="flow-arrow">→</div>'
-        f'<div class="flow-step">'
-        f'<div class="flow-kicker">2 · Lo que más pesa</div>'
-        f'<div class="flow-value">{driver_value}</div>'
-        f'<div class="flow-note">Es el factor con mayor importancia relativa al elegir entre alternativas.</div>'
-        f'</div>'
-        f'<div class="flow-arrow">→</div>'
-        f'<div class="flow-step">'
-        f'<div class="flow-kicker">3 · Qué tan bien representa la compra</div>'
-        f'<div class="flow-value">{validation_value}</div>'
-        f'<div class="flow-note">Porcentaje que confirma que la secuencia refleja su forma de decidir.</div>'
-        f'</div>'
-        f'</div>',
-        unsafe_allow_html=True,
+    cards_html = (
+        '<div class="exec-grid">'
+        + executive_stage_card(
+            1,
+            "Lo primero que se decide",
+            "Top 3 de criterios que aparecen primero al comenzar la elección.",
+            stage_map.get("Primero", []),
+            "hair",
+            "#1D5E9E",
+            "#E8F3FC",
+        )
+        + executive_stage_card(
+            2,
+            "Lo que se toma en cuenta después",
+            "Top 3 de criterios que ganan peso en el segundo momento.",
+            stage_map.get("Después", []),
+            "diamond",
+            "#5B4AE6",
+            "#F0EDFF",
+        )
+        + executive_stage_card(
+            3,
+            "Lo que termina definiendo la compra",
+            "Top 3 de criterios que cierran la decisión.",
+            stage_map.get("Cierre", []),
+            "check",
+            "#169B62",
+            "#E8F8F0",
+        )
+        + '</div>'
     )
+    st.markdown(cards_html, unsafe_allow_html=True)
 
-    st.markdown("#### ¿Qué pasa si una opción no está disponible?")
-    st.caption("Estas tres medidas muestran qué tan fácil es que el comprador cambie de opción o mantenga la compra.")
+    alcance = decision_reach(stage).head(6).copy()
+
+    left, right = st.columns([1.08, 0.92], gap="large")
+
+    with left:
+        st.markdown('<div class="section-title">Qué elementos intervienen realmente en la decisión</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-sub">Porcentaje de personas que consideran cada criterio en algún momento: primero, después o al cierre.</div>',
+            unsafe_allow_html=True,
+        )
+
+        reach_long = alcance.melt(
+            id_vars=["criterio", "Alcance", "Por cada 1,000"],
+            value_vars=["Primero", "Después", "Cierre"],
+            var_name="Momento",
+            value_name="porcentaje",
+        )
+        reach_long["texto"] = reach_long["porcentaje"].map(lambda x: f"{x:.1f}%" if x >= 4 else "")
+        ordered = alcance.sort_values("Alcance")["criterio"].tolist()
+
+        fig_reach = px.bar(
+            reach_long,
+            x="porcentaje",
+            y="criterio",
+            color="Momento",
+            orientation="h",
+            barmode="stack",
+            text="texto",
+            category_orders={"criterio": ordered, "Momento": ["Primero", "Después", "Cierre"]},
+            labels={"porcentaje": "Alcance", "criterio": "", "Momento": "Momento"},
+        )
+        fig_reach.update_traces(textposition="inside", insidetextanchor="middle")
+        for _, row in alcance.iterrows():
+            fig_reach.add_annotation(
+                x=min(float(row["Alcance"]) + 1.2, 97),
+                y=row["criterio"],
+                text=f'<b>{row["Alcance"]:.1f}%</b> · {int(row["Por cada 1,000"])}',
+                showarrow=False,
+                xanchor="left",
+                font=dict(size=11, color="#173A5E"),
+            )
+        fig_reach.update_layout(
+            height=450,
+            xaxis_range=[0, 103],
+            yaxis={"categoryorder":"array","categoryarray":ordered},
+            legend=dict(orientation="h", y=1.08, x=0),
+            margin=dict(l=5, r=85, t=25, b=20),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+        )
+        st.plotly_chart(fig_reach, use_container_width=True)
+
+        top_reach = alcance.iloc[0]
+        st.markdown(
+            f'<div class="insight-callout">{icon_svg("chart", "#1D5E9E")} '
+            f'<b>{html.escape(str(top_reach["criterio"]))}</b> interviene en la decisión de aproximadamente '
+            f'<b>{top_reach["Alcance"]:.0f} de cada 100 compradores</b>, aunque no siempre sea el primer criterio.</div>',
+            unsafe_allow_html=True,
+        )
+
+    with right:
+        st.markdown('<div class="section-title">Qué genera mayor valor al elegir</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-sub">Factores con mayor importancia relativa dentro del MaxDiff.</div>',
+            unsafe_allow_html=True,
+        )
+
+        if is_tendential:
+            md = maxdiff_tendential(filtered, reference).head(5).copy()
+            md["valor"] = md["tendencial"]
+        else:
+            md = maxdiff_compare(filtered, df).head(5).copy()
+            md["valor"] = md["segmento"]
+
+        md = md.sort_values("valor")
+        md["etiqueta"] = md["valor"].map(lambda x: f"{x:.1f}")
+        fig_md = px.bar(
+            md,
+            x="valor",
+            y="driver",
+            orientation="h",
+            text="etiqueta",
+            labels={"valor":"Importancia","driver":""},
+        )
+        fig_md.update_traces(textposition="outside")
+        polish_bar(fig_md, height=320)
+        fig_md.update_layout(margin=dict(l=5, r=35, t=15, b=20))
+        st.plotly_chart(fig_md, use_container_width=True)
+
+        top_driver = md.sort_values("valor", ascending=False).iloc[0]
+        second_driver = md.sort_values("valor", ascending=False).iloc[1] if len(md) > 1 else top_driver
+        st.markdown(
+            f'<div class="insight-callout">{icon_svg("diamond", "#5B4AE6")} '
+            f'<b>{html.escape(str(top_driver["driver"]))}</b> es el factor con mayor valor relativo; '
+            f'<b>{html.escape(str(second_driver["driver"]))}</b> también tiene un peso alto en la elección.</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("### Qué pasa si no encuentro lo que quiero")
+    st.caption("Situaciones que pueden cambiar la elección.")
 
     substitution_view = pd.DataFrame({
         "situacion": [
-            "Falta su marca → cambia de marca",
-            "Falta su tono → cambia de marca",
-            "No hay promoción → compra igual",
+            "Cambia de marca si no encuentra su marca",
+            "Cambia de marca para conservar su tono",
+            "Compra aun sin promoción",
         ],
         "porcentaje": [
             k["cambia_marca_si_falta_marca"],
@@ -751,97 +1068,44 @@ if page == "Resumen":
         ],
     })
     substitution_view["valor"] = substitution_view["porcentaje"].map(lambda x: f"{x:.1f}%")
-
     fig_sub = px.bar(
-        substitution_view,
+        substitution_view.sort_values("porcentaje"),
         x="porcentaje",
         y="situacion",
         orientation="h",
         text="valor",
-        title="Respuesta ante ausencia de marca, tono o promoción",
-        labels={"porcentaje": "Porcentaje", "situacion": ""},
+        labels={"porcentaje":"Porcentaje","situacion":""},
     )
     fig_sub.update_traces(textposition="inside", insidetextanchor="end", textfont_size=14)
-    fig_sub.update_layout(
-        yaxis={"categoryorder":"array", "categoryarray":substitution_view["situacion"].tolist()[::-1]},
-        xaxis_range=[0, 100],
-        showlegend=False,
-    )
-    polish_bar(fig_sub, height=330, percent_axis=True)
+    fig_sub.update_layout(xaxis_range=[0,100], height=300, showlegend=False, margin=dict(l=5,r=20,t=10,b=20))
+    polish_bar(fig_sub, height=300, percent_axis=True)
     st.plotly_chart(fig_sub, use_container_width=True)
 
-    if is_tendential:
-        stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
-    else:
-        stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
-    stage["valor"] = stage["porcentaje"].map(lambda x: f"{x:.1f}%")
+    brand_risk = float(k["cambia_marca_si_falta_marca"])
+    tone_risk = float(k["cambia_marca_para_conservar_tono"])
+    promo_resist = float(k["compra_sin_promocion"])
 
-    fig = px.bar(
-        stage,
-        x="porcentaje",
-        y="criterio",
-        color="etapa",
-        barmode="group",
-        orientation="h",
-        text="valor",
-        labels={"porcentaje": "Porcentaje", "criterio": "", "etapa": "Momento"},
-        title="Qué se toma en cuenta en cada momento de la compra",
-    )
-    fig.update_traces(textposition="outside")
-    fig.update_layout(yaxis={"categoryorder": "total ascending"})
-    polish_bar(fig, height=560, percent_axis=True)
-    st.plotly_chart(fig, use_container_width=True)
-
-    alcance = decision_reach(stage)
-
-    st.markdown("#### Alcance de cada criterio en la decisión")
-    st.caption(
-        "Alcance significa que el criterio aparece en algún momento: al inicio, después o al cierre. "
-        "Como el cuestionario no permite repetir el mismo criterio dentro de la secuencia, estos tres porcentajes sí pueden sumarse."
-    )
-
-    reach_long = alcance.melt(
-        id_vars=["criterio", "Alcance", "Por cada 1,000"],
-        value_vars=["Primero", "Después", "Cierre"],
-        var_name="Momento",
-        value_name="porcentaje",
-    )
-    reach_long["texto"] = reach_long["porcentaje"].map(lambda x: f"{x:.1f}%" if x >= 4 else "")
-
-    ordered = alcance.sort_values("Alcance")["criterio"].tolist()
-    fig_reach = px.bar(
-        reach_long,
-        x="porcentaje",
-        y="criterio",
-        color="Momento",
-        orientation="h",
-        barmode="stack",
-        text="texto",
-        category_orders={"criterio": ordered, "Momento": ["Primero", "Después", "Cierre"]},
-        title="Cuántos compradores consideran cada criterio en algún momento",
-        labels={"porcentaje": "Alcance", "criterio": "", "Momento": "Momento"},
-    )
-    fig_reach.update_traces(textposition="inside", insidetextanchor="middle")
-
-    for _, row in alcance.iterrows():
-        fig_reach.add_annotation(
-            x=min(float(row["Alcance"]) + 1.5, 99),
-            y=row["criterio"],
-            text=f'<b>{row["Alcance"]:.1f}%</b> · {int(row["Por cada 1,000"])} de 1,000',
-            showarrow=False,
-            xanchor="left",
-            font=dict(size=12),
-        )
-
-    fig_reach.update_layout(
-        xaxis_range=[0, 105],
-        yaxis={"categoryorder": "array", "categoryarray": ordered},
-        legend_title_text="Momento en que aparece",
-    )
-    polish_bar(fig_reach, height=max(520, 90 + 42 * len(alcance)), percent_axis=True)
-    st.plotly_chart(fig_reach, use_container_width=True)
-    st.caption(
-        "Ejemplo: un alcance de 56% significa que ese criterio interviene en la decisión de aproximadamente 560 de cada 1,000 compradores, sin importar si aparece primero, después o al cierre."
+    st.markdown(
+        '<div class="implications">'
+        '<div class="implications-title">Implicaciones clave</div>'
+        '<div class="imp-grid">'
+        '<div class="imp-card">'
+        f'<div class="imp-kicker">1 · Proteger</div>'
+        f'<div class="imp-main">{icon_svg("shield", "#1D5E9E")} Disponibilidad de marca y amplitud de tonos</div>'
+        f'<div class="imp-note">El cambio de marca ante falta de disponibilidad alcanza {brand_risk:.1f}%.</div>'
+        '</div>'
+        '<div class="imp-card">'
+        f'<div class="imp-kicker">2 · Comunicar</div>'
+        f'<div class="imp-main">{icon_svg("megaphone", "#169B62")} {html.escape(str(top_driver["driver"]))}</div>'
+        '<div class="imp-note">Reforzar en comunicación los beneficios que más valor aportan al momento de elegir.</div>'
+        '</div>'
+        '<div class="imp-card">'
+        f'<div class="imp-kicker">3 · Activar</div>'
+        f'<div class="imp-main">{icon_svg("tag", "#5B4AE6")} Promoción como acelerador</div>'
+        f'<div class="imp-note">{promo_resist:.1f}% compraría aun sin promoción; funciona mejor como apoyo que como fundamento de la elección.</div>'
+        '</div>'
+        '</div></div>',
+        unsafe_allow_html=True,
     )
 
 elif page == "Cómo se decide":
