@@ -200,7 +200,7 @@ section[data-testid="stSidebar"] > div,
 .brand-word {font-size:1.45rem;font-weight:800;letter-spacing:.06em;}
 .brand-tag {font-size:.76rem;line-height:1.3;opacity:.86;margin-top:14px;}
 .brand-main {
-    padding:22px 28px 18px 28px;
+    padding:22px 185px 18px 28px;
     display:flex;
     flex-direction:column;
     justify-content:center;
@@ -209,25 +209,30 @@ section[data-testid="stSidebar"] > div,
 }
 .goideas-mark {
     position:absolute;
-    top:16px;
-    right:20px;
+    top:18px;
+    right:24px;
     text-align:right;
-    color:#173A5E;
-    opacity:.55;
     line-height:1;
     pointer-events:none;
+    z-index:3;
+    background:rgba(255,255,255,.88);
+    border:1px solid rgba(28,76,116,.10);
+    border-radius:12px;
+    padding:8px 10px 7px 10px;
+    box-shadow:0 3px 10px rgba(20,55,90,.04);
 }
 .goideas-mark-main {
-    font-size:.86rem;
+    font-size:.92rem;
     font-weight:800;
-    letter-spacing:.015em;
+    letter-spacing:.01em;
+    color:#345A7C;
 }
 .goideas-mark-sub {
-    margin-top:3px;
+    margin-top:4px;
     font-size:.50rem;
     font-weight:700;
     letter-spacing:.10em;
-    color:#6F8398;
+    color:#8AA0B4;
 }
 .brand-kicker {
     font-size:.82rem;
@@ -753,6 +758,13 @@ section[data-testid="stSidebar"] > div,
     flex:0 0 auto;
 }
 @media (max-width: 900px) {
+    .brand-main {padding:20px 22px 18px 22px;}
+    .goideas-mark {
+        position:static;
+        align-self:flex-end;
+        margin-bottom:10px;
+        width:max-content;
+    }
     [class*="st-key-nav_tile_"] {min-height:188px;padding:13px 10px 12px 10px !important;}
     .nav-icon-circle {width:58px;height:58px;}
     .nav-icon-circle svg {width:30px !important;height:30px !important;}
