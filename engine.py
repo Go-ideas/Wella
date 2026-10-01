@@ -216,6 +216,252 @@ def scenario_counts(df: pd.DataFrame, scenario: str, simulated_n: int=100) -> pd
     return t
 
 
+def _plackett_luce_weights(rankings: pd.DataFrame, options: list[str]) -> np.ndarray:
+    """Fit Plackett-Luce worths for observed top-2 rankings (A1 -> A2).
+
+    The likelihood is P(A1=i) * P(A2=j | A1=i). The MM updates below are
+    dependency-free and deterministic, which keeps the dashboard lightweight.
+    """
+    k = len(options)
+    if k == 0:
+        return np.array([], dtype=float)
+    if k == 1:
+        return np.array([1.0], dtype=float)
+
+    idx = {opt: i for i, opt in enumerate(options)}
+    first_counts = np.zeros(k, dtype=float)
+    selected_counts = np.zeros(k, dtype=float)
+
+    valid = rankings[["anaquel_1", "anaquel_2"]].dropna()
+    for _, row in valid.iterrows():
+        a = str(row["anaquel_1"])
+        b = str(row["anaquel_2"])
+        if a not in idx or b not in idx or a == b:
+            continue
+        first_counts[idx[a]] += 1.0
+        selected_counts[idx[a]] += 1.0
+        selected_counts[idx[b]] += 1.0
+
+    n = float(first_counts.sum())
+    if n <= 0:
+        return np.ones(k, dtype=float) / k
+
+    worth = np.ones(k, dtype=float)
+    eps = 1e-12
+
+    for _ in range(500):
+        total = float(worth.sum())
+        denom = np.full(k, n / max(total, eps), dtype=float)
+
+        # Stage 2: option k is available whenever it was not selected first.
+        for first_i, count in enumerate(first_counts):
+            if count <= 0:
+                continue
+            stage_total = max(total - worth[first_i], eps)
+            contribution = count / stage_total
+            for option_i in range(k):
+                if option_i != first_i:
+                    denom[option_i] += contribution
+
+        new_worth = np.divide(
+            selected_counts,
+            np.maximum(denom, eps),
+            out=np.full(k, eps, dtype=float),
+            where=denom > 0,
+        )
+        new_worth = np.maximum(new_worth, eps)
+        new_worth /= new_worth.mean()
+
+        if np.max(np.abs(np.log(new_worth / worth))) < 1e-9:
+            worth = new_worth
+            break
+        worth = new_worth
+
+    worth /= worth.sum()
+    return worth
+
+
+def shelf_statistical_model(
+    df: pd.DataFrame,
+    reference: pd.DataFrame | None = None,
+    *,
+    shrink_strength: float = 0.0,
+    bootstrap: int = 250,
+    seed: int = 20261001,
+) -> pd.DataFrame:
+    """Statistical shelf ranking from A1/A2 using Plackett-Luce + bootstrap.
+
+    Returns a model-based first-choice probability ("prob_estimada"), a 95%
+    bootstrap interval, and the probability of being ranked #1 across bootstrap
+    resamples ("estabilidad_top1").
+
+    For small filtered bases, optional partial pooling blends the filtered
+    estimate toward the reference distribution.
+    """
+    target = df[["anaquel_1", "anaquel_2"]].dropna().copy()
+    ref = (
+        reference[["anaquel_1", "anaquel_2"]].dropna().copy()
+        if reference is not None and {"anaquel_1", "anaquel_2"}.issubset(reference.columns)
+        else pd.DataFrame(columns=["anaquel_1", "anaquel_2"])
+    )
+
+    options = sorted(
+        set(target["anaquel_1"].astype(str))
+        | set(target["anaquel_2"].astype(str))
+        | set(ref["anaquel_1"].astype(str))
+        | set(ref["anaquel_2"].astype(str))
+    )
+    if not options:
+        return pd.DataFrame(
+            columns=[
+                "organizacion",
+                "prob_estimada",
+                "ic_bajo",
+                "ic_alto",
+                "estabilidad_top1",
+                "n",
+            ]
+        )
+
+    target_w = _plackett_luce_weights(target, options)
+    ref_w = _plackett_luce_weights(ref, options) if len(ref) else target_w.copy()
+
+    n = len(target)
+    lam = n / (n + float(shrink_strength)) if shrink_strength > 0 else 1.0
+    est = lam * target_w + (1.0 - lam) * ref_w
+    est /= est.sum()
+
+    boot_vals = []
+    if bootstrap > 0 and n >= 2:
+        rng = np.random.default_rng(seed)
+        values = target.reset_index(drop=True)
+        for _ in range(int(bootstrap)):
+            take = rng.integers(0, n, size=n)
+            sample = values.iloc[take]
+            bw = _plackett_luce_weights(sample, options)
+            bw = lam * bw + (1.0 - lam) * ref_w
+            bw /= bw.sum()
+            boot_vals.append(bw)
+
+    if boot_vals:
+        arr = np.vstack(boot_vals)
+        low = np.quantile(arr, 0.025, axis=0)
+        high = np.quantile(arr, 0.975, axis=0)
+        winners = np.argmax(arr, axis=1)
+        stability = np.array([(winners == i).mean() for i in range(len(options))])
+    else:
+        low = est.copy()
+        high = est.copy()
+        stability = np.zeros(len(options), dtype=float)
+        stability[int(np.argmax(est))] = 1.0
+
+    out = pd.DataFrame({
+        "organizacion": options,
+        "prob_estimada": est * 100,
+        "ic_bajo": low * 100,
+        "ic_alto": high * 100,
+        "estabilidad_top1": stability * 100,
+        "n": n,
+    })
+    return out.sort_values("prob_estimada", ascending=False).reset_index(drop=True)
+
+
+def shelf_conditional_model(
+    df: pd.DataFrame,
+    first_choice: str,
+    reference: pd.DataFrame | None = None,
+    *,
+    strength: float = 8.0,
+) -> pd.DataFrame:
+    """Estimate P(A2=j | A1=first_choice) with empirical-Bayes smoothing.
+
+    The prior comes from the reference conditional distribution when available;
+    otherwise it falls back to the overall A2 distribution. A simple Wilson
+    interval is returned using the effective sample size after smoothing.
+    """
+    first_choice = str(first_choice)
+    target = df[["anaquel_1", "anaquel_2"]].dropna().copy()
+    ref = (
+        reference[["anaquel_1", "anaquel_2"]].dropna().copy()
+        if reference is not None and {"anaquel_1", "anaquel_2"}.issubset(reference.columns)
+        else pd.DataFrame(columns=["anaquel_1", "anaquel_2"])
+    )
+
+    options = sorted(
+        (
+            set(target["anaquel_1"].astype(str))
+            | set(target["anaquel_2"].astype(str))
+            | set(ref["anaquel_1"].astype(str))
+            | set(ref["anaquel_2"].astype(str))
+        ) - {first_choice}
+    )
+    if not options:
+        return pd.DataFrame(
+            columns=["organizacion", "prob_condicional", "ic_bajo", "ic_alto", "lift", "n_rama"]
+        )
+
+    subset = target[target["anaquel_1"].astype(str) == first_choice]
+    counts = subset["anaquel_2"].astype(str).value_counts()
+    n_branch = int(counts.sum())
+
+    ref_subset = ref[ref["anaquel_1"].astype(str) == first_choice]
+    if len(ref_subset):
+        prior_counts = ref_subset["anaquel_2"].astype(str).value_counts()
+    elif len(ref):
+        prior_counts = ref["anaquel_2"].astype(str).value_counts()
+    else:
+        prior_counts = target["anaquel_2"].astype(str).value_counts()
+
+    prior_vec = np.array([float(prior_counts.get(o, 0.0)) for o in options], dtype=float)
+    if prior_vec.sum() <= 0:
+        prior_vec = np.ones(len(options), dtype=float)
+    prior_vec /= prior_vec.sum()
+
+    obs = np.array([float(counts.get(o, 0.0)) for o in options], dtype=float)
+    effective_n = float(n_branch) + float(strength)
+    post = (obs + float(strength) * prior_vec) / max(effective_n, 1e-12)
+
+    baseline_counts = target["anaquel_2"].astype(str).value_counts()
+    baseline = np.array([float(baseline_counts.get(o, 0.0)) for o in options], dtype=float)
+    if baseline.sum() <= 0:
+        baseline = prior_vec.copy()
+    else:
+        baseline /= baseline.sum()
+
+    # Wilson interval using the effective sample size of the smoothed estimate.
+    z = 1.96
+    denom = 1.0 + z * z / max(effective_n, 1.0)
+    center = (post + z * z / (2.0 * max(effective_n, 1.0))) / denom
+    half = (
+        z
+        * np.sqrt(
+            np.maximum(
+                post * (1.0 - post) / max(effective_n, 1.0)
+                + z * z / (4.0 * max(effective_n, 1.0) ** 2),
+                0.0,
+            )
+        )
+        / denom
+    )
+
+    lift = np.divide(
+        post,
+        np.maximum(baseline, 1e-12),
+        out=np.full(len(options), np.nan),
+        where=baseline > 0,
+    )
+
+    out = pd.DataFrame({
+        "organizacion": options,
+        "prob_condicional": post * 100,
+        "ic_bajo": np.maximum(0.0, center - half) * 100,
+        "ic_alto": np.minimum(1.0, center + half) * 100,
+        "lift": lift,
+        "n_rama": n_branch,
+    })
+    return out.sort_values("prob_condicional", ascending=False).reset_index(drop=True)
+
+
 def shelf_priority(df: pd.DataFrame) -> pd.DataFrame:
     opts=sorted(set(df["anaquel_1"].dropna()).union(set(df["anaquel_2"].dropna())))
     rows=[]; n=max(len(df),1)
