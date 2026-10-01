@@ -1278,7 +1278,13 @@ def decision_tree_figure(
                 strength=12.0,
             )
             step3 = step3[~step3["opcion"].isin([d1, d2])].copy()
-            d3_limit = top_d3 if d1_idx == 0 and d2_idx == 0 else 1
+            if top_d3 >= 3:
+                # Vista Amplio: mostrar más alternativas de cierre.
+                # La ruta principal conserva hasta 3 cierres y el resto hasta 2.
+                d3_limit = top_d3 if d1_idx == 0 and d2_idx == 0 else 2
+            else:
+                # Simple/Medio: mantener el árbol compacto.
+                d3_limit = top_d3 if d1_idx == 0 and d2_idx == 0 else 1
             step3 = step3.head(d3_limit).copy()
 
             children3 = [
@@ -2313,7 +2319,7 @@ elif page == "Cómo se decide":
     if detail == "Simple":
         top_d1, top_d2, top_d3 = 2, 2, 1
     elif detail == "Amplio":
-        top_d1, top_d2, top_d3 = 5, 3, 2
+        top_d1, top_d2, top_d3 = 5, 3, 3
     else:
         top_d1, top_d2, top_d3 = 3, 2, 2
 
