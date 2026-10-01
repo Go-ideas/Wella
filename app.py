@@ -1228,6 +1228,42 @@ def decision_tree_figure(
     return fig
 
 
+def product_language(filters: dict) -> dict:
+    """Client-facing terminology adapts to the selected product."""
+    selected = filters.get("producto", []) or []
+    if not isinstance(selected, list):
+        selected = [selected]
+    if len(selected) != 1:
+        return {
+            "concept": "tono o color",
+            "short": "tono",
+            "missing": "Tono/color no disponible",
+            "switch_label": "Cambia de marca para conservar el tono o color que busca",
+        }
+
+    product = str(selected[0]).lower()
+    if "shampoo" in product or "acondicionador" in product or "matizador" in product:
+        return {
+            "concept": "matiz o resultado de color",
+            "short": "matiz/color",
+            "missing": "Matiz/color no disponible",
+            "switch_label": "Cambia de marca para conservar el matiz o resultado de color que busca",
+        }
+    if "decolorante" in product or "aclarante" in product:
+        return {
+            "concept": "resultado de aclaración",
+            "short": "aclaración",
+            "missing": "Resultado de aclaración no disponible",
+            "switch_label": "Cambia de marca para conservar el resultado de aclaración que busca",
+        }
+    return {
+        "concept": "tono o color",
+        "short": "tono",
+        "missing": "Tono/color no disponible",
+        "switch_label": "Cambia de marca para conservar el tono o color que busca",
+    }
+
+
 INSIGHT_ENGINE_VERSION = "1.0"
 
 
@@ -1249,6 +1285,7 @@ def build_dynamic_insights(
     alcance: pd.DataFrame,
     md: pd.DataFrame,
     k: dict,
+    language: dict,
 ) -> dict:
     """Generate client-facing insights using deterministic rules only."""
     insights = {
@@ -1317,12 +1354,13 @@ def build_dynamic_insights(
     else:
         brand_phrase = f"la falta de marca muestra un riesgo contenido de sustitución ({brand:.1f}%)"
 
+    concept = language["concept"]
     if tone >= 50:
-        tone_phrase = f"el tono también domina con fuerza sobre la lealtad a marca ({tone:.1f}%)"
+        tone_phrase = f"el {concept} también domina con fuerza sobre la lealtad a marca ({tone:.1f}%)"
     elif tone >= 30:
-        tone_phrase = f"el tono también puede provocar cambio de marca ({tone:.1f}%)"
+        tone_phrase = f"el {concept} también puede provocar cambio de marca ({tone:.1f}%)"
     else:
-        tone_phrase = f"el tono provoca menor cambio de marca ({tone:.1f}%)"
+        tone_phrase = f"el {concept} provoca menor cambio de marca ({tone:.1f}%)"
 
     if promo >= 60:
         promo_phrase = f"mientras que la promoción es menos determinante: {promo:.1f}% compraría aun sin ella"
@@ -1345,12 +1383,13 @@ def get_cached_dynamic_insights(
     alcance: pd.DataFrame,
     md: pd.DataFrame,
     k: dict,
+    language: dict,
 ) -> dict:
     """Cache by a stable filter key; deterministic across repeated selections."""
     key = _filter_signature(filters, reading_mode, n)
     cache = st.session_state.setdefault("insight_cache", {})
     if key not in cache:
-        cache[key] = build_dynamic_insights(alcance, md, k)
+        cache[key] = build_dynamic_insights(alcance, md, k, language)
     return cache[key]
 
 
@@ -1435,10 +1474,10 @@ def drivers_panel_html(md: pd.DataFrame, insight: str) -> str:
     )
 
 
-def substitution_panel_html(k: dict, insight: str) -> str:
+def substitution_panel_html(k: dict, insight: str, language: dict) -> str:
     rows = [
         ("swap", "#D84B65", "#FDECEF", float(k["cambia_marca_si_falta_marca"]), "Cambia de marca si no encuentra su marca"),
-        ("hair", "#E7862E", "#FFF2E6", float(k["cambia_marca_para_conservar_tono"]), "Cambia de marca para conservar su tono"),
+        ("hair", "#E7862E", "#FFF2E6", float(k["cambia_marca_para_conservar_tono"]), language["switch_label"]),
         ("tag", "#6754D9", "#F0EDFF", float(k["compra_sin_promocion"]), "Compra aun sin promoción"),
     ]
     html_rows = ""
@@ -1745,6 +1784,7 @@ if page == "Resumen":
     st.markdown("### Resumen ejecutivo")
     st.caption("Una lectura rápida de qué consideran, qué genera valor y qué puede cambiar su elección.")
     k = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
+    language = product_language(filters)
 
     if is_tendential:
         stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
@@ -1818,13 +1858,14 @@ if page == "Resumen":
         alcance,
         md,
         k,
+        language,
     )
 
     st.markdown(
         '<div class="summary-grid">'
         + reach_panel_html(alcance, dynamic_insights["reach"])
         + drivers_panel_html(md, dynamic_insights["drivers"])
-        + substitution_panel_html(k, dynamic_insights["substitution"])
+        + substitution_panel_html(k, dynamic_insights["substitution"], language)
         + '</div>',
         unsafe_allow_html=True,
     )
@@ -2080,8 +2121,11 @@ elif page == "Qué pesa más":
         st.caption("El valor sirve para comparar la importancia relativa de los factores: un número mayor significa que ese factor pesa más.")
 
 elif page == "Qué pasa si falta...":
+    language = product_language(filters)
     st.markdown("### Qué pasa cuando algo no está disponible")
-    st.caption("Explora qué harían los compradores si no encuentran la marca, el tono o la promoción que esperaban.")
+    st.caption(
+        f"Explora qué harían los compradores si no encuentran la marca, el {language['concept']} o la promoción que esperaban."
+    )
 
     if is_tendential:
         k = tendential_kpis(filtered, reference)
@@ -2090,12 +2134,17 @@ elif page == "Qué pasa si falta...":
 
     a, b, c = st.columns(3)
     a.metric("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
-    b.metric("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
+    b.metric(f"Si falta su {language['short']}, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
     c.metric("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
 
-    scenario = st.selectbox(
+    scenario_display = st.selectbox(
         "Quiero probar qué pasa cuando:",
-        ["Marca no disponible", "Tono/color no disponible", "Sin promoción"],
+        ["Marca no disponible", language["missing"], "Sin promoción"],
+    )
+    scenario = (
+        "Tono/color no disponible"
+        if scenario_display == language["missing"]
+        else scenario_display
     )
     sim_n = st.slider("Número de compradores para visualizar", 100, 5000, 1000, 100)
 
