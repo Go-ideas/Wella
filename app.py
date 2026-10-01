@@ -1347,8 +1347,9 @@ def decision_tree_figure(
     cursor = 0.0
     # Separación vertical: suficiente para que las tarjetas de Cierre no se toquen,
     # sin volver a abrir demasiado todo el árbol.
-    leaf_gap = 1.18
-    d2_group_gap = 0.18
+    leaf_gap = 1.10
+    closure_gap = 1.30
+    d2_group_gap = 0.22
     branch_gap = 0.60
     for d1 in branches:
         d2_positions = []
@@ -1358,7 +1359,7 @@ def decision_tree_figure(
                 for d3 in d2["children"]:
                     d3["y_raw"] = cursor
                     d3_positions.append(cursor)
-                    cursor += leaf_gap
+                    cursor += closure_gap
                 d2["y_raw"] = sum(d3_positions) / len(d3_positions)
                 # Un poco de aire entre grupos de cierres pertenecientes a distintos D2.
                 cursor += d2_group_gap
@@ -1470,10 +1471,10 @@ def decision_tree_figure(
             bgcolor=main_fill if highlight else other_fill,
             bordercolor=main_border if highlight else other_border,
             borderwidth=1.6 if highlight else 1,
-            borderpad=10,
-            font=dict(size=12.2, color=text_color),
+            borderpad=8,
+            font=dict(size=12.0, color=text_color),
             width=205,
-            height=50,
+            height=44,
         )
 
         # Porcentaje fijo: siempre visible y alineado a la derecha del nodo.
@@ -1542,7 +1543,7 @@ def decision_tree_figure(
         (x_d3, "Cierre", "¿Qué termina definiendo?"),
     ]:
         fig.add_annotation(
-            x=x, y=-1.05,
+            x=x, y=-1.18,
             text=f"<b>{title}</b><br><span style='font-size:10px;color:#8092A6'>{subtitle}</span>",
             showarrow=False,
             xanchor="center",
@@ -1580,7 +1581,7 @@ def decision_tree_figure(
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
         # Rango invertido: encabezados arriba (-1.05) y ramas hacia abajo.
-        yaxis=dict(range=[max_y + 0.55, -1.45], visible=False, fixedrange=True),
+        yaxis=dict(range=[max_y + 0.55, -1.62], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
             orientation="h",
