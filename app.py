@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import html
 import io
 import pandas as pd
 import plotly.express as px
@@ -52,6 +53,46 @@ st.markdown(
 .secure {padding:10px 14px; border:1px solid #C7D7EA; background:#F6FAFF; border-radius:12px; margin:.3rem 0 .8rem 0;}
 [data-testid="stMetricValue"] {font-size:1.65rem;}
 [data-testid="stMetricLabel"] {font-weight:600;}
+.kpi-card {
+    background:#F7F9FC;
+    border:1px solid #E3E8EF;
+    border-radius:18px;
+    padding:18px 20px;
+    min-height:138px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+.kpi-label {
+    color:#21324A;
+    font-size:0.98rem;
+    line-height:1.25;
+    font-weight:600;
+    margin-bottom:10px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+}
+.kpi-value {
+    color:#12243B;
+    font-size:1.82rem;
+    line-height:1.12;
+    font-weight:500;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:normal;
+}
+.kpi-note {
+    display:inline-block;
+    margin-top:10px;
+    font-size:0.82rem;
+    line-height:1.2;
+    color:#245E45;
+    background:#E7F4EC;
+    padding:4px 9px;
+    border-radius:999px;
+    width:max-content;
+    max-width:100%;
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -95,6 +136,21 @@ def polish_bar(fig, height=480, percent_axis=False):
         yaxis=dict(title=""),
     )
     return fig
+
+
+def kpi_card(label: str, value: str, note: str | None = None):
+    """Tarjeta KPI con texto completo, sin truncar valores largos."""
+    label_safe = html.escape(str(label))
+    value_safe = html.escape(str(value))
+    note_html = f'<div class="kpi-note">{html.escape(str(note))}</div>' if note else ""
+    st.markdown(
+        f'<div class="kpi-card">'
+        f'<div class="kpi-label">{label_safe}</div>'
+        f'<div class="kpi-value">{value_safe}</div>'
+        f'{note_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 
 uploaded = st.file_uploader(
@@ -240,15 +296,22 @@ if page == "Resumen":
     k = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Entrevistas analizadas", f"{n}", quality)
-    c2.metric("La secuencia describe su compra", f"{k['validacion_arbol']:.1f}%")
-    c3.metric("Lo primero que se decide", k["primer_gate"] or "—")
-    c4.metric("Lo que más pesa al elegir", k["top_driver"] or "—")
+    with c1:
+        kpi_card("Entrevistas analizadas", f"{n}", quality)
+    with c2:
+        kpi_card("La secuencia describe su compra", f"{k['validacion_arbol']:.1f}%")
+    with c3:
+        kpi_card("Lo primero que se decide", k["primer_gate"] or "—")
+    with c4:
+        kpi_card("Lo que más pesa al elegir", k["top_driver"] or "—")
 
     c5, c6, c7 = st.columns(3)
-    c5.metric("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
-    c6.metric("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
-    c7.metric("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
+    with c5:
+        kpi_card("Si falta su marca, cambia de marca", f"{k['cambia_marca_si_falta_marca']:.1f}%")
+    with c6:
+        kpi_card("Si falta su tono, cambia de marca", f"{k['cambia_marca_para_conservar_tono']:.1f}%")
+    with c7:
+        kpi_card("Sin promoción, compra igual", f"{k['compra_sin_promocion']:.1f}%")
 
     if is_tendential:
         stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
