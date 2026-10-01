@@ -461,20 +461,22 @@ footer {visibility:hidden;}
 }
 .st-key-study_nav [data-testid="stButton"] > button {
     width:100%;
-    min-height:142px;
+    min-height:152px;
     border-radius:20px !important;
     border:1px solid #D8E3EE;
     box-shadow:0 6px 18px rgba(27,64,102,.04);
     font-size:1rem;
-    font-weight:750;
+    font-weight:800;
     color:#163858;
     background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
     transition:all .16s ease;
-    padding:14px 10px !important;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    gap:9px;
+    padding:16px 12px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:12px !important;
+    white-space:normal !important;
 }
 .st-key-study_nav [data-testid="stButton"] > button:hover {
     border-color:#73A7D8;
@@ -488,19 +490,30 @@ footer {visibility:hidden;}
     box-shadow:0 8px 22px rgba(22,118,200,.13);
 }
 .st-key-study_nav [data-testid="stIconMaterial"] {
-    font-size:2.45rem !important;
+    font-size:2.8rem !important;
     line-height:1 !important;
     margin:0 !important;
     color:#1766AA;
+    display:block !important;
 }
 .st-key-study_nav button[kind="primary"] [data-testid="stIconMaterial"] {
     color:#0B67B4 !important;
 }
 .st-key-study_nav [data-testid="stButton"] p {
     font-size:1rem !important;
-    line-height:1.18 !important;
-    font-weight:750 !important;
+    line-height:1.15 !important;
+    font-weight:800 !important;
     text-align:center !important;
+    margin:0 !important;
+}
+.nav-subline {
+    text-align:center;
+    color:#7A8DA4;
+    font-size:.74rem;
+    line-height:1.2;
+    margin-top:-2px;
+    min-height:30px;
+    padding:0 5px;
 }
 .nav-status {
     text-align:center;
@@ -569,7 +582,7 @@ footer {visibility:hidden;}
 }
 @media (max-width: 900px) {
     .st-key-study_nav [data-testid="stHorizontalBlock"] {gap:.45rem !important;}
-    .st-key-study_nav [data-testid="stButton"] > button {min-height:100px;font-size:.84rem;}
+    .st-key-study_nav [data-testid="stButton"] > button {min-height:112px;font-size:.84rem;}
     .st-key-study_nav [data-testid="stIconMaterial"] {font-size:1.9rem !important;}
     .nav-connector {display:none;}
     .exec-grid {grid-template-columns:1fr;}
@@ -1416,11 +1429,11 @@ if is_tendential:
     )
 
 NAV_ITEMS = [
-    ("Resumen", ":material/bar_chart:", "Resumen"),
-    ("Cómo se decide", ":material/account_tree:", "Cómo se decide"),
-    ("Qué pesa más", ":material/diamond:", "Qué pesa más"),
-    ("Qué pasa si falta...", ":material/warning:", "Qué pasa si falta..."),
-    ("Cómo ordenar el anaquel", ":material/view_module:", "Cómo ordenar el anaquel"),
+    ("Resumen", ":material/analytics:", "Resumen", "Vista ejecutiva"),
+    ("Cómo se decide", ":material/route:", "Decisión de compra", "Cómo eligen"),
+    ("Qué pesa más", ":material/diamond:", "Drivers clave", "Qué pesa más"),
+    ("Qué pasa si falta...", ":material/warning_amber:", "Riesgo de cambio", "Si algo falta"),
+    ("Cómo ordenar el anaquel", ":material/grid_view:", "Anaquel", "Cómo facilitar la búsqueda"),
 ]
 
 if "nav_page" not in st.session_state:
@@ -1437,7 +1450,7 @@ clicked_page = None
 with st.container(key="study_nav"):
     nav_cols = st.columns([1, 0.12, 1, 0.12, 1, 0.12, 1, 0.12, 1], gap="small")
 
-    for idx, (page_name, page_icon, page_label) in enumerate(NAV_ITEMS):
+    for idx, (page_name, page_icon, page_label, page_subtitle) in enumerate(NAV_ITEMS):
         col_idx = idx * 2
         is_active = st.session_state["nav_page"] == page_name
 
@@ -1450,6 +1463,11 @@ with st.container(key="study_nav"):
                 use_container_width=True,
             ):
                 clicked_page = page_name
+
+            st.markdown(
+                f'<div class="nav-subline">{html.escape(page_subtitle)}</div>',
+                unsafe_allow_html=True,
+            )
 
             status = "ESTÁS AQUÍ" if is_active else str(idx + 1)
             status_class = "nav-status active" if is_active else "nav-status"
