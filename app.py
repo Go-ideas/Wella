@@ -1306,10 +1306,12 @@ def decision_tree_figure(
             "children": children2,
         })
 
-    # Posicionamiento vertical a partir de las hojas.
+    # Posicionamiento vertical en unidades reales, no normalizadas.
+    # Así cada nodo conserva una separación mínima en píxeles aunque cambie
+    # el tamaño de la ventana, el nivel de detalle o la cantidad de ramas.
     cursor = 0.0
-    leaf_gap = 1.15
-    branch_gap = 0.62
+    leaf_gap = 1.35
+    branch_gap = 0.90
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1333,17 +1335,14 @@ def decision_tree_figure(
 
     max_y = max(cursor - branch_gap, 1.0)
 
-    def ny(v):
-        return 0.92 - (v / max_y) * 0.80
-
     for d1 in branches:
-        d1["y"] = ny(d1["y_raw"])
+        d1["y"] = d1["y_raw"]
         for d2 in d1["children"]:
-            d2["y"] = ny(d2["y_raw"])
+            d2["y"] = d2["y_raw"]
             for d3 in d2["children"]:
-                d3["y"] = ny(d3["y_raw"])
+                d3["y"] = d3["y_raw"]
 
-    root_y = sum(d["y"] for d in branches) / len(branches) if branches else 0.52
+    root_y = sum(d["y"] for d in branches) / len(branches) if branches else max_y / 2
 
     # La ruta destacada puede venir de la exploración del usuario.
     if highlight_path:
@@ -1503,7 +1502,7 @@ def decision_tree_figure(
         (x_d3, "Cierre", "¿Qué termina definiendo?"),
     ]:
         fig.add_annotation(
-            x=x, y=1.035,
+            x=x, y=-1.05,
             text=f"<b>{title}</b><br><span style='font-size:10px;color:#8092A6'>{subtitle}</span>",
             showarrow=False,
             xanchor="center",
@@ -1530,22 +1529,19 @@ def decision_tree_figure(
         showlegend=True,
     ))
 
-    leaf_count = sum(
-        max(1, len(d2["children"]))
-        for d1 in branches
-        for d2 in d1["children"]
-    )
-    d1_count = max(1, len(branches))
-    # Amplio necesita más aire vertical: el alto depende de hojas y puntos de partida.
-    height = min(1320, max(560, 320 + leaf_count * 92 + max(0, d1_count - 3) * 70))
+    # ~82 px por unidad vertical: una separación de 1.35 deja más de 100 px
+    # entre hojas. Esto evita que tarjetas de 50 px y textos de dos líneas se encimen.
+    vertical_span = max_y + 2.25
+    height = int(max(560, min(1800, 170 + vertical_span * 82)))
 
     fig.update_layout(
         height=height,
-        margin=dict(l=24, r=44, t=78, b=25),
+        margin=dict(l=24, r=44, t=78, b=28),
         plot_bgcolor="white",
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
-        yaxis=dict(range=[0.04, 1.10], visible=False, fixedrange=True),
+        # Rango invertido: encabezados arriba (-1.05) y ramas hacia abajo.
+        yaxis=dict(range=[max_y + 0.75, -1.55], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
             orientation="h",
