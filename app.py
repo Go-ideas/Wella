@@ -1067,6 +1067,80 @@ def conditional_reading(
     return out, mode, base_n
 
 
+def main_decision_path(
+    data: pd.DataFrame,
+    reference_data: pd.DataFrame,
+    *,
+    force_tendential: bool = False,
+) -> dict:
+    """Ruta principal D1 → D2 → D3 usando la misma lectura condicional del árbol."""
+    step1, mode1, base1 = conditional_reading(
+        data,
+        reference_data,
+        reference_data,
+        "decision_1",
+        force_tendential=force_tendential,
+        strength=12.0,
+    )
+    if step1.empty:
+        return {}
+
+    first = str(step1.iloc[0]["opcion"])
+    first_pct = float(step1.iloc[0]["porcentaje"])
+
+    target1 = data[data["decision_1"] == first].copy()
+    ref1 = reference_data[reference_data["decision_1"] == first].copy()
+    step2, mode2, base2 = conditional_reading(
+        target1,
+        ref1,
+        reference_data,
+        "decision_2",
+        force_tendential=force_tendential,
+        strength=14.0,
+    )
+    step2 = step2[step2["opcion"] != first].reset_index(drop=True)
+    if step2.empty:
+        return {
+            "first": first, "first_pct": first_pct, "first_base": base1, "first_mode": mode1,
+            "second": "—", "second_pct": 0.0, "second_base": 0, "second_mode": "",
+            "third": "—", "third_pct": 0.0, "third_base": 0, "third_mode": "",
+        }
+
+    second = str(step2.iloc[0]["opcion"])
+    second_pct = float(step2.iloc[0]["porcentaje"])
+
+    target12 = target1[target1["decision_2"] == second].copy()
+    ref12 = ref1[ref1["decision_2"] == second].copy()
+    broader_d3_ref = ref1 if len(ref1) else reference_data
+    step3, mode3, base3 = conditional_reading(
+        target12,
+        ref12,
+        broader_d3_ref,
+        "decision_3",
+        force_tendential=force_tendential,
+        strength=12.0,
+    )
+    step3 = step3[~step3["opcion"].isin([first, second])].reset_index(drop=True)
+
+    third = str(step3.iloc[0]["opcion"]) if len(step3) else "—"
+    third_pct = float(step3.iloc[0]["porcentaje"]) if len(step3) else 0.0
+
+    return {
+        "first": first,
+        "first_pct": first_pct,
+        "first_base": base1,
+        "first_mode": mode1,
+        "second": second,
+        "second_pct": second_pct,
+        "second_base": base2,
+        "second_mode": mode2,
+        "third": third,
+        "third_pct": third_pct,
+        "third_base": base3,
+        "third_mode": mode3,
+    }
+
+
 def conditional_bar(table: pd.DataFrame, title: str, top_n: int = 8):
     shown = table.head(top_n).copy()
     shown["valor"] = shown["porcentaje"].map(lambda x: f"{x:.1f}%")
@@ -1999,23 +2073,18 @@ if page == "Resumen":
 elif page == "Cómo se decide":
     base_reference = reference if is_tendential else filtered
     k_decision = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
+    main_path = main_decision_path(
+        filtered,
+        base_reference,
+        force_tendential=is_tendential,
+    )
 
-    if is_tendential:
-        decision_stage = decision_stage_tendential(filtered, reference).rename(columns={"tendencial": "porcentaje"})
-    else:
-        decision_stage = decision_stage_summary(filtered).rename(columns={"pct": "porcentaje"})
-
-    stage_tops = {}
-    for stage_name in ["Primero", "Después", "Cierre"]:
-        tmp = decision_stage[decision_stage["etapa"] == stage_name].sort_values("porcentaje", ascending=False).head(1)
-        stage_tops[stage_name] = (
-            (str(tmp.iloc[0]["criterio"]), float(tmp.iloc[0]["porcentaje"]))
-            if len(tmp) else ("—", 0.0)
-        )
-
-    first_name, first_pct = stage_tops["Primero"]
-    second_name, second_pct = stage_tops["Después"]
-    third_name, third_pct = stage_tops["Cierre"]
+    first_name = main_path.get("first", "—")
+    first_pct = float(main_path.get("first_pct", 0.0))
+    second_name = main_path.get("second", "—")
+    second_pct = float(main_path.get("second_pct", 0.0))
+    third_name = main_path.get("third", "—")
+    third_pct = float(main_path.get("third_pct", 0.0))
 
     st.markdown(
         f"""
@@ -2023,14 +2092,20 @@ elif page == "Cómo se decide":
           <div class="decision-header-main">
             <div class="decision-header-icon">{icon_svg("route", "#1D6FB5")}</div>
             <div>
-              <div class="decision-header-kicker">Decisión de compra</div>
+              <div class="decision-header-kicker">Decisión de compra · Ruta principal</div>
               <div class="decision-header-title">Cómo se construye la elección</div>
-              <div class="decision-header-sub">Qué inicia la decisión, qué entra después y qué termina definiendo la compra.</div>
+              <div class="decision-header-sub">Seguimos la secuencia declarada: qué aparece primero, qué sigue dentro de esa rama y qué termina definiendo la compra.</div>
             </div>
           </div>
           <div class="decision-meta">
-            <div class="decision-meta-card"><div class="decision-meta-label">Base analizada</div><div class="decision-meta-value">{n} entrevistas</div></div>
-            <div class="decision-meta-card"><div class="decision-meta-label">Valida la secuencia</div><div class="decision-meta-value">{k_decision["validacion_arbol"]:.1f}%</div></div>
+            <div class="decision-meta-card">
+              <div class="decision-meta-label">Base analizada</div>
+              <div class="decision-meta-value">{n} entrevistas</div>
+            </div>
+            <div class="decision-meta-card">
+              <div class="decision-meta-label">La secuencia describe bien la decisión</div>
+              <div class="decision-meta-value">{k_decision["validacion_arbol"]:.1f}%</div>
+            </div>
           </div>
         </div>
         """,
@@ -2041,26 +2116,44 @@ elif page == "Cómo se decide":
         '<div class="decision-steps">'
         '<div class="decision-step-card">'
         f'<div class="decision-step-icon" style="background:#E8F3FC">{icon_svg("hair", "#1D6FB5")}</div>'
-        f'<div><div class="decision-step-kicker">1 · Inicia</div><div class="decision-step-name">{html.escape(first_name)}</div><div class="decision-step-copy">Principal punto de partida de la decisión.</div></div>'
+        f'<div><div class="decision-step-kicker">1 · Inicia</div><div class="decision-step-name">{html.escape(first_name)}</div>'
+        '<div class="decision-step-copy">Principal punto de partida entre el total de compradores.</div></div>'
         f'<div class="decision-step-value">{first_pct:.1f}%</div></div>'
         '<div class="decision-step-card">'
         f'<div class="decision-step-icon" style="background:#F0EDFF">{icon_svg("tag", "#5B4AE6")}</div>'
-        f'<div><div class="decision-step-kicker">2 · Continúa</div><div class="decision-step-name">{html.escape(second_name)}</div><div class="decision-step-copy">Criterio con mayor presencia en el segundo momento.</div></div>'
+        f'<div><div class="decision-step-kicker">2 · Continúa</div><div class="decision-step-name">{html.escape(second_name)}</div>'
+        f'<div class="decision-step-copy">Siguiente criterio más frecuente entre quienes iniciaron por {html.escape(first_name)}.</div></div>'
         f'<div class="decision-step-value">{second_pct:.1f}%</div></div>'
         '<div class="decision-step-card">'
         f'<div class="decision-step-icon" style="background:#E8F8F0">{icon_svg("check", "#169B62")}</div>'
-        f'<div><div class="decision-step-kicker">3 · Define</div><div class="decision-step-name">{html.escape(third_name)}</div><div class="decision-step-copy">Criterio que aparece con mayor frecuencia al cierre.</div></div>'
+        f'<div><div class="decision-step-kicker">3 · Define</div><div class="decision-step-name">{html.escape(third_name)}</div>'
+        f'<div class="decision-step-copy">Cierre más frecuente dentro de la ruta {html.escape(first_name)} → {html.escape(second_name)}.</div></div>'
         f'<div class="decision-step-value">{third_pct:.1f}%</div></div>'
         '</div>',
         unsafe_allow_html=True,
     )
+    st.caption(
+        "Ruta principal: el porcentaje del segundo paso se calcula dentro del primero, y el del cierre dentro de los dos pasos anteriores."
+    )
+
+    st.markdown("#### Explora las alternativas de la decisión")
+    st.caption("Abre el árbol completo o enfócate en un punto de partida específico.")
 
     ctl1, ctl2 = st.columns([1.15, .85])
     with ctl1:
         first_choices = ["Todos"] + options_for(filtered, "decision_1")
-        selected_first = st.selectbox("Explorar el árbol desde", first_choices, index=0, key="tree_first_choice")
+        selected_first = st.selectbox(
+            "Explorar el árbol desde",
+            first_choices,
+            index=0,
+            key="tree_first_choice",
+        )
     with ctl2:
-        detail = st.select_slider("Nivel de detalle", options=["Simple", "Medio", "Amplio"], value="Medio")
+        detail = st.select_slider(
+            "Nivel de detalle",
+            options=["Simple", "Medio", "Amplio"],
+            value="Medio",
+        )
 
     if detail == "Simple":
         top_d1, top_d2, top_d3 = 3, 2, 2
@@ -2070,7 +2163,11 @@ elif page == "Cómo se decide":
         top_d1, top_d2, top_d3 = 3, 3, 2
 
     with st.container(key="decision_tree_panel", border=True):
-        st.markdown('<div class="decision-tree-title">Árbol de decisión de compra</div><div class="decision-tree-sub">Los porcentajes son condicionales a la rama anterior.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="decision-tree-title">Árbol de decisión de compra</div>'
+            '<div class="decision-tree-sub">Muestra las alternativas y la probabilidad de continuar por cada rama.</div>',
+            unsafe_allow_html=True,
+        )
         tree_fig = decision_tree_figure(
             filtered,
             base_reference,
@@ -2080,76 +2177,150 @@ elif page == "Cómo se decide":
             top_d2=top_d2,
             top_d3=top_d3,
         )
-        tree_fig.update_layout(title=None, margin=dict(l=20, r=220, t=35, b=20), paper_bgcolor="white", plot_bgcolor="white")
+        tree_fig.update_layout(
+            title=None,
+            margin=dict(l=20, r=220, t=35, b=20),
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+        )
         st.plotly_chart(tree_fig, use_container_width=True)
-        st.caption("Cómo leerlo: cada porcentaje indica qué proporción de quienes llegaron al paso anterior continúa por esa alternativa.")
+        st.caption(
+            "Cómo leerlo: cada porcentaje responde a qué proporción de quienes llegaron al paso anterior continúa por esa alternativa."
+        )
 
     if is_tendential:
         step1 = categorical_tendential(
-            filtered, base_reference, "decision_1", strength=12.0, label_name="opcion"
+            filtered,
+            base_reference,
+            "decision_1",
+            strength=12.0,
+            label_name="opcion",
         )[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
     else:
         counts1 = filtered["decision_1"].dropna().value_counts()
-        step1 = pd.DataFrame({"opcion": counts1.index.astype(str), "porcentaje": counts1.values / counts1.sum() * 100})
+        step1 = pd.DataFrame({
+            "opcion": counts1.index.astype(str),
+            "porcentaje": counts1.values / counts1.sum() * 100,
+        })
 
     first_options = step1["opcion"].tolist()
-    default_first = selected_first if selected_first != "Todos" and selected_first in first_options else first_options[0]
+    default_first = (
+        selected_first
+        if selected_first != "Todos" and selected_first in first_options
+        else (first_name if first_name in first_options else first_options[0])
+    )
 
     left, right = st.columns([.92, 1.08], gap="large")
 
     with left:
         with st.container(key="decision_insight_panel", border=True):
             st.markdown("#### Lectura clave")
-            st.caption("Síntesis de la secuencia actual.")
+            st.caption("Síntesis de la ruta principal.")
             insight = (
-                f"<b>{html.escape(first_name)}</b> es la principal puerta de entrada ({first_pct:.1f}%). "
-                f"<b>{html.escape(second_name)}</b> gana mayor presencia después y "
-                f"<b>{html.escape(third_name)}</b> destaca como criterio de cierre."
+                f"<b>{html.escape(first_name)}</b> es el principal punto de entrada ({first_pct:.1f}% del total). "
+                f"Entre quienes comienzan por este criterio, <b>{html.escape(second_name)}</b> es el siguiente paso más frecuente "
+                f"({second_pct:.1f}%). Dentro de esa rama, <b>{html.escape(third_name)}</b> es el cierre que aparece con mayor frecuencia "
+                f"({third_pct:.1f}%)."
             )
-            st.markdown(f'<div class="decision-insight-text">{icon_svg("chart", "#1D6FB5")} {insight}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="decision-insight-text">{icon_svg("chart", "#1D6FB5")} {insight}</div>',
+                unsafe_allow_html=True,
+            )
 
     with right:
         with st.container(key="decision_route_panel", border=True):
             st.markdown("#### Explora una ruta")
-            st.caption("Selecciona un recorrido y revisa el peso dentro de cada paso.")
+            st.caption("Cambia cada paso para entender cómo evoluciona una rama específica.")
 
-            route_first = st.selectbox("Primero", first_options, index=first_options.index(default_first), key="decision_route_first")
+            route_first = st.selectbox(
+                "Primero",
+                first_options,
+                index=first_options.index(default_first),
+                key="decision_route_first",
+            )
             row1 = step1[step1["opcion"] == route_first]
             pct1 = float(row1.iloc[0]["porcentaje"]) if len(row1) else 0.0
 
             target1 = filtered[filtered["decision_1"] == route_first].copy()
             ref1 = base_reference[base_reference["decision_1"] == route_first].copy()
-            step2, _, _ = conditional_reading(target1, ref1, base_reference, "decision_2", force_tendential=is_tendential, strength=14.0)
+            step2, _, _ = conditional_reading(
+                target1,
+                ref1,
+                base_reference,
+                "decision_2",
+                force_tendential=is_tendential,
+                strength=14.0,
+            )
+            step2 = step2[step2["opcion"] != route_first].reset_index(drop=True)
             opts2 = step2["opcion"].tolist()
 
             if opts2:
-                route_second = st.selectbox("Después", opts2, index=0, key="decision_route_second")
+                preferred_second = second_name if route_first == first_name and second_name in opts2 else opts2[0]
+                route_second = st.selectbox(
+                    "Después",
+                    opts2,
+                    index=opts2.index(preferred_second),
+                    key="decision_route_second",
+                )
                 row2 = step2[step2["opcion"] == route_second]
                 pct2 = float(row2.iloc[0]["porcentaje"]) if len(row2) else 0.0
 
                 target12 = target1[target1["decision_2"] == route_second].copy()
                 ref12 = ref1[ref1["decision_2"] == route_second].copy()
                 broader = ref1 if len(ref1) else base_reference
-                step3, _, _ = conditional_reading(target12, ref12, broader, "decision_3", force_tendential=is_tendential, strength=12.0)
+                step3, _, _ = conditional_reading(
+                    target12,
+                    ref12,
+                    broader,
+                    "decision_3",
+                    force_tendential=is_tendential,
+                    strength=12.0,
+                )
+                step3 = step3[~step3["opcion"].isin([route_first, route_second])].reset_index(drop=True)
                 opts3 = step3["opcion"].tolist()
 
                 if opts3:
-                    route_third = st.selectbox("Cierre", opts3, index=0, key="decision_route_third")
+                    preferred_third = (
+                        third_name
+                        if route_first == first_name and route_second == second_name and third_name in opts3
+                        else opts3[0]
+                    )
+                    route_third = st.selectbox(
+                        "Cierre",
+                        opts3,
+                        index=opts3.index(preferred_third),
+                        key="decision_route_third",
+                    )
                     row3 = step3[step3["opcion"] == route_third]
                     pct3 = float(row3.iloc[0]["porcentaje"]) if len(row3) else 0.0
+
                     st.markdown(
                         f"""
                         <div class="route-flow">
-                          <div class="route-node"><div class="route-node-label">Primero</div><div class="route-node-name">{html.escape(route_first)}</div><div class="route-node-value">{pct1:.1f}%</div></div>
+                          <div class="route-node">
+                            <div class="route-node-label">Primero · Total</div>
+                            <div class="route-node-name">{html.escape(route_first)}</div>
+                            <div class="route-node-value">{pct1:.1f}%</div>
+                          </div>
                           <div class="route-arrow">→</div>
-                          <div class="route-node"><div class="route-node-label">Después</div><div class="route-node-name">{html.escape(route_second)}</div><div class="route-node-value">{pct2:.1f}%</div></div>
+                          <div class="route-node">
+                            <div class="route-node-label">Después · Dentro de la rama</div>
+                            <div class="route-node-name">{html.escape(route_second)}</div>
+                            <div class="route-node-value">{pct2:.1f}%</div>
+                          </div>
                           <div class="route-arrow">→</div>
-                          <div class="route-node"><div class="route-node-label">Cierre</div><div class="route-node-name">{html.escape(route_third)}</div><div class="route-node-value">{pct3:.1f}%</div></div>
+                          <div class="route-node">
+                            <div class="route-node-label">Cierre · Dentro de la rama</div>
+                            <div class="route-node-name">{html.escape(route_third)}</div>
+                            <div class="route-node-value">{pct3:.1f}%</div>
+                          </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-                    st.caption("Los porcentajes se interpretan dentro de cada etapa; no se multiplican.")
+                    st.caption(
+                        "Los porcentajes son condicionales por etapa. No se multiplican para interpretar la ruta."
+                    )
 
 elif page == "Qué pesa más":
     st.markdown("### Qué pesa más al elegir")
