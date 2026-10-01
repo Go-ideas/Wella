@@ -52,21 +52,41 @@ st.markdown(
 <style>
 #MainMenu {visibility:hidden;}
 footer {visibility:hidden;}
-[data-testid="stToolbar"] {display:none !important;}
 [data-testid="stDecoration"] {display:none !important;}
 [data-testid="stStatusWidget"] {visibility:hidden;}
+section[data-testid="stSidebar"],
 [data-testid="stSidebar"] {
     display:block !important;
     visibility:visible !important;
+    opacity:1 !important;
+    width:310px !important;
+    min-width:310px !important;
+    max-width:310px !important;
+    transform:none !important;
+    margin-left:0 !important;
+    left:0 !important;
+    pointer-events:auto !important;
 }
-[data-testid="stSidebarCollapsedControl"] {
+section[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div:first-child {
+    width:310px !important;
+    min-width:310px !important;
+    max-width:310px !important;
+    background:linear-gradient(180deg,#F8FBFE 0%,#F2F6FA 100%);
+    border-right:1px solid #DDE6EF;
+}
+[data-testid="stSidebar"][aria-expanded="false"],
+section[data-testid="stSidebar"][aria-expanded="false"] {
+    width:310px !important;
+    min-width:310px !important;
+    transform:none !important;
+}
+[data-testid="stSidebarCollapsedControl"],
+button[aria-label*="sidebar" i],
+button[title*="sidebar" i] {
     display:flex !important;
     visibility:visible !important;
     opacity:1 !important;
-}
-[data-testid="stSidebar"] > div:first-child {
-    background:linear-gradient(180deg,#F8FBFE 0%,#F2F6FA 100%);
-    border-right:1px solid #DDE6EF;
 }
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
@@ -1419,8 +1439,8 @@ df = st.session_state["dataset"]
 meta = st.session_state["metadata"]
 
 with st.sidebar:
-    st.markdown("## Filtros")
-    st.caption("Ajusta la lectura del estudio.")
+    st.markdown("## 🔎 Filtros")
+    st.caption("Selecciona los cortes que quieres analizar.")
     st.success("Estudio abierto")
     if st.button("Cerrar estudio", use_container_width=True):
         clear_loaded_data()
