@@ -593,6 +593,29 @@ section[data-testid="stSidebar"] > div,
 .st-key-decision_tree_panel [data-testid="stVerticalBlockBorderWrapper"],.st-key-decision_insight_panel [data-testid="stVerticalBlockBorderWrapper"],.st-key-decision_route_panel [data-testid="stVerticalBlockBorderWrapper"]{border:1px solid #DCE6EF!important;border-radius:20px!important;background:#FFF!important;box-shadow:0 5px 16px rgba(22,56,88,.035)}
 .decision-tree-title{font-size:1.10rem;font-weight:800;color:#153A60}.decision-tree-sub{font-size:.78rem;color:#74889D;margin-top:2px}.decision-insight-text{font-size:.88rem;line-height:1.5;color:#2B4863;background:#F7FAFD;border:1px solid #E5EDF4;border-radius:14px;padding:13px 14px}
 .route-flow{display:grid;grid-template-columns:1fr 22px 1fr 22px 1fr;gap:6px;align-items:center;margin-top:10px}.route-node{border:1px solid #DCE6EF;background:#F8FBFE;border-radius:14px;padding:10px;text-align:center;min-width:0}.route-node-label{font-size:.66rem;color:#788DA3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}.route-node-name{font-size:.78rem;line-height:1.2;font-weight:800;color:#173A5E;overflow-wrap:anywhere}.route-node-value{font-size:.86rem;font-weight:800;color:#0F68B2;margin-top:3px}.route-arrow{color:#8AA6BF;font-size:1.1rem;text-align:center}
+.decision-section-title{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:16px 0 10px}
+.decision-section-title-main{font-size:1.18rem;font-weight:800;color:#153A60}
+.decision-section-title-sub{font-size:.78rem;color:#75899F;margin-top:3px}
+.st-key-decision_controls [data-testid="stVerticalBlockBorderWrapper"]{border:1px solid #DCE6EF!important;border-radius:17px!important;background:#FAFCFE!important;padding:4px 8px 8px!important}
+.st-key-decision_controls label p{font-size:.72rem!important;font-weight:800!important;color:#44627F!important}
+.st-key-decision_controls [data-testid="stSegmentedControl"] button{min-height:38px!important;font-size:.78rem!important;font-weight:700!important}
+.decision-side-title{font-size:1.03rem;font-weight:800;color:#153A60;margin-bottom:4px}
+.decision-side-sub{font-size:.72rem;color:#7A8EA4;margin-bottom:12px}
+.main-route-vertical{display:flex;flex-direction:column;gap:0;margin-top:4px}
+.main-route-step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0}
+.main-route-number{width:30px;height:30px;border-radius:50%;background:#2F80ED;color:#FFF;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800}
+.main-route-name{font-size:.82rem;font-weight:800;color:#173A5E;line-height:1.2}
+.main-route-pct{font-size:1rem;font-weight:800;color:#1871C7;margin-top:2px}
+.main-route-connector{width:2px;height:14px;background:#BDD1E4;margin-left:14px}
+.alt-routes{margin-top:12px;padding-top:12px;border-top:1px solid #E6EDF4}
+.alt-route-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #EEF2F6}
+.alt-route-name{font-size:.72rem;line-height:1.32;color:#506A84}
+.alt-route-pct{font-size:.78rem;font-weight:800;color:#173A5E}
+.reading-card-title{font-size:1rem;font-weight:800;color:#153A60;margin-bottom:6px}
+.reading-card-copy{font-size:.80rem;line-height:1.48;color:#5F7489}
+.reading-card-copy ul{margin:.15rem 0 0 1.1rem;padding:0}
+.reading-card-copy li{margin:.18rem 0}
+@media (max-width:900px){.decision-section-title{align-items:flex-start;flex-direction:column}.main-route-step{grid-template-columns:30px minmax(0,1fr)}}
 @media (max-width:900px){.decision-header{grid-template-columns:1fr}.decision-meta{width:100%}.decision-meta-card{flex:1}.decision-steps{grid-template-columns:1fr}.route-flow{grid-template-columns:1fr}.route-arrow{transform:rotate(90deg)}}
 .panel-head {
     font-size:1.05rem;
@@ -2189,9 +2212,9 @@ elif page == "Cómo se decide":
           <div class="decision-header-main">
             <div class="decision-header-icon">{icon_svg("route", "#1D6FB5")}</div>
             <div>
-              <div class="decision-header-kicker">Decisión de compra · Ruta principal</div>
-              <div class="decision-header-title">Cómo se construye la elección</div>
-              <div class="decision-header-sub">Seguimos la secuencia declarada: qué aparece primero, qué sigue dentro de esa rama y qué termina definiendo la compra.</div>
+              <div class="decision-header-kicker">Decisión de compra</div>
+              <div class="decision-header-title">Árbol de decisión de compra</div>
+              <div class="decision-header-sub">Explora las alternativas y la probabilidad de continuar por cada rama.</div>
             </div>
           </div>
           <div class="decision-meta">
@@ -2210,214 +2233,155 @@ elif page == "Cómo se decide":
     )
 
     st.markdown(
-        '<div class="decision-steps">'
-        '<div class="decision-step-card">'
-        f'<div class="decision-step-icon" style="background:#E8F3FC">{icon_svg("hair", "#1D6FB5")}</div>'
-        f'<div><div class="decision-step-kicker">1 · Inicia</div><div class="decision-step-name">{html.escape(first_name)}</div>'
-        '<div class="decision-step-copy">Principal punto de partida entre el total de compradores.</div></div>'
-        f'<div class="decision-step-value">{first_pct:.1f}%</div></div>'
-        '<div class="decision-step-card">'
-        f'<div class="decision-step-icon" style="background:#F0EDFF">{icon_svg("tag", "#5B4AE6")}</div>'
-        f'<div><div class="decision-step-kicker">2 · Continúa</div><div class="decision-step-name">{html.escape(second_name)}</div>'
-        f'<div class="decision-step-copy">Siguiente criterio más frecuente entre quienes iniciaron por {html.escape(first_name)}.</div></div>'
-        f'<div class="decision-step-value">{second_pct:.1f}%</div></div>'
-        '<div class="decision-step-card">'
-        f'<div class="decision-step-icon" style="background:#E8F8F0">{icon_svg("check", "#169B62")}</div>'
-        f'<div><div class="decision-step-kicker">3 · Define</div><div class="decision-step-name">{html.escape(third_name)}</div>'
-        f'<div class="decision-step-copy">Cierre más frecuente dentro de la ruta {html.escape(first_name)} → {html.escape(second_name)}.</div></div>'
-        f'<div class="decision-step-value">{third_pct:.1f}%</div></div>'
+        '<div class="decision-section-title">'
+        '<div><div class="decision-section-title-main">Explora el árbol</div>'
+        '<div class="decision-section-title-sub">Cambia el nivel de detalle o enfócate únicamente en la ruta principal.</div></div>'
         '</div>',
         unsafe_allow_html=True,
     )
-    st.caption(
-        "Ruta principal: el porcentaje del segundo paso se calcula dentro del primero, y el del cierre dentro de los dos pasos anteriores."
-    )
 
-    st.markdown("#### Explora las alternativas de la decisión")
-    st.caption("Abre el árbol completo o enfócate en un punto de partida específico.")
-
-    ctl1, ctl2 = st.columns([1.15, .85])
-    with ctl1:
-        first_choices = ["Todos"] + options_for(filtered, "decision_1")
-        selected_first = st.selectbox(
-            "Explorar el árbol desde",
-            first_choices,
-            index=0,
-            key="tree_first_choice",
-        )
-    with ctl2:
-        detail = st.select_slider(
-            "Nivel de detalle",
-            options=["Simple", "Medio", "Amplio"],
-            value="Medio",
-        )
+    with st.container(key="decision_controls", border=True):
+        control_a, control_b = st.columns([1.15, 0.85])
+        with control_a:
+            detail = st.segmented_control(
+                "Nivel de detalle",
+                options=["Simple", "Medio", "Amplio"],
+                default="Medio",
+                key="decision_detail",
+            )
+        with control_b:
+            view_mode = st.segmented_control(
+                "Ver",
+                options=["Todo el árbol", "Ruta principal"],
+                default="Todo el árbol",
+                key="decision_view_mode",
+            )
 
     if detail == "Simple":
         top_d1, top_d2, top_d3 = 2, 2, 1
     elif detail == "Amplio":
-        top_d1, top_d2, top_d3 = 4, 3, 2
+        top_d1, top_d2, top_d3 = 5, 3, 2
     else:
         top_d1, top_d2, top_d3 = 3, 2, 2
 
-    with st.container(key="decision_tree_panel", border=True):
-        st.markdown(
-            '<div class="decision-tree-title">Árbol de decisión de compra</div>'
-            '<div class="decision-tree-sub">Muestra las alternativas y la probabilidad de continuar por cada rama.</div>',
-            unsafe_allow_html=True,
-        )
-        tree_fig = decision_tree_figure(
-            filtered,
-            base_reference,
-            first_choice=None if selected_first == "Todos" else selected_first,
-            force_tendential=is_tendential,
-            top_d1=top_d1,
-            top_d2=top_d2,
-            top_d3=top_d3,
-        )
-        tree_fig.update_layout(
-            title=None,
-            margin=dict(l=20, r=220, t=35, b=20),
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-        )
-        st.plotly_chart(tree_fig, use_container_width=True)
-        st.caption(
-            "Cómo leerlo: cada porcentaje responde a qué proporción de quienes llegaron al paso anterior continúa por esa alternativa."
-        )
-
-    if is_tendential:
-        step1 = categorical_tendential(
-            filtered,
-            base_reference,
-            "decision_1",
-            strength=12.0,
-            label_name="opcion",
-        )[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
+    exact_routes = top_routes(filtered, top_n=8)
+    main_route_label = f"{first_name} → {second_name} → {third_name}"
+    if len(exact_routes):
+        alt_routes = exact_routes[exact_routes["ruta"] != main_route_label].head(3).copy()
     else:
-        counts1 = filtered["decision_1"].dropna().value_counts()
-        step1 = pd.DataFrame({
-            "opcion": counts1.index.astype(str),
-            "porcentaje": counts1.values / counts1.sum() * 100,
-        })
+        alt_routes = pd.DataFrame(columns=["ruta", "pct"])
 
-    first_options = step1["opcion"].tolist()
-    default_first = (
-        selected_first
-        if selected_first != "Todos" and selected_first in first_options
-        else (first_name if first_name in first_options else first_options[0])
-    )
+    tree_col, side_col = st.columns([3.25, 1.0], gap="large")
 
-    left, right = st.columns([.92, 1.08], gap="large")
+    with tree_col:
+        with st.container(key="decision_tree_panel", border=True):
+            st.markdown(
+                '<div class="decision-tree-title">Árbol de decisión de compra</div>'
+                '<div class="decision-tree-sub">Cada porcentaje se calcula dentro de la rama anterior.</div>',
+                unsafe_allow_html=True,
+            )
 
-    with left:
+            if view_mode == "Ruta principal":
+                tree_fig = decision_tree_figure(
+                    filtered,
+                    base_reference,
+                    first_choice=first_name,
+                    force_tendential=is_tendential,
+                    top_d1=1,
+                    top_d2=1,
+                    top_d3=1,
+                )
+            else:
+                tree_fig = decision_tree_figure(
+                    filtered,
+                    base_reference,
+                    first_choice=None,
+                    force_tendential=is_tendential,
+                    top_d1=top_d1,
+                    top_d2=top_d2,
+                    top_d3=top_d3,
+                )
+
+            tree_fig.update_layout(
+                title=None,
+                margin=dict(l=12, r=18, t=30, b=18),
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+            )
+            st.plotly_chart(tree_fig, use_container_width=True)
+
+    with side_col:
+        with st.container(key="decision_route_panel", border=True):
+            st.markdown('<div class="decision-side-title">Ruta principal</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="decision-side-sub">Secuencia dominante paso a paso.</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"""
+                <div class="main-route-vertical">
+                  <div class="main-route-step">
+                    <div class="main-route-number">1</div>
+                    <div><div class="main-route-name">{html.escape(first_name)}</div><div class="main-route-pct">{first_pct:.1f}%</div></div>
+                  </div>
+                  <div class="main-route-connector"></div>
+                  <div class="main-route-step">
+                    <div class="main-route-number">2</div>
+                    <div><div class="main-route-name">{html.escape(second_name)}</div><div class="main-route-pct">{second_pct:.1f}%</div></div>
+                  </div>
+                  <div class="main-route-connector"></div>
+                  <div class="main-route-step">
+                    <div class="main-route-number">3</div>
+                    <div><div class="main-route-name">{html.escape(third_name)}</div><div class="main-route-pct">{third_pct:.1f}%</div></div>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if len(alt_routes):
+                alt_html = '<div class="alt-routes"><div class="decision-side-title" style="font-size:.88rem">Otras rutas relevantes</div><div class="decision-side-sub">% sobre el total de compradores.</div>'
+                for _, rr in alt_routes.iterrows():
+                    alt_html += (
+                        '<div class="alt-route-row">'
+                        f'<div class="alt-route-name">{html.escape(str(rr["ruta"]))}</div>'
+                        f'<div class="alt-route-pct">{float(rr["pct"]):.1f}%</div>'
+                        '</div>'
+                    )
+                alt_html += '</div>'
+                st.markdown(alt_html, unsafe_allow_html=True)
+
+    bottom_left, bottom_right = st.columns([1.15, 1.0], gap="large")
+
+    with bottom_left:
         with st.container(key="decision_insight_panel", border=True):
-            st.markdown("#### Lectura clave")
-            st.caption("Síntesis de la ruta principal.")
+            st.markdown('<div class="reading-card-title">Lectura clave</div>', unsafe_allow_html=True)
             insight = (
                 f"<b>{html.escape(first_name)}</b> es el principal punto de entrada ({first_pct:.1f}% del total). "
-                f"Entre quienes comienzan por este criterio, <b>{html.escape(second_name)}</b> es el siguiente paso más frecuente "
-                f"({second_pct:.1f}%). Dentro de esa rama, <b>{html.escape(third_name)}</b> es el cierre que aparece con mayor frecuencia "
-                f"({third_pct:.1f}%)."
+                f"Dentro de este grupo, <b>{html.escape(second_name)}</b> es el siguiente criterio con mayor peso "
+                f"({second_pct:.1f}%) y <b>{html.escape(third_name)}</b> aparece como el cierre dominante "
+                f"dentro de esa rama ({third_pct:.1f}%)."
             )
             st.markdown(
                 f'<div class="decision-insight-text">{icon_svg("chart", "#1D6FB5")} {insight}</div>',
                 unsafe_allow_html=True,
             )
 
-    with right:
-        with st.container(key="decision_route_panel", border=True):
-            st.markdown("#### Explora una ruta")
-            st.caption("Cambia cada paso para entender cómo evoluciona una rama específica.")
-
-            route_first = st.selectbox(
-                "Primero",
-                first_options,
-                index=first_options.index(default_first),
-                key="decision_route_first",
+    with bottom_right:
+        with st.container(key="decision_reading_panel", border=True):
+            st.markdown('<div class="reading-card-title">Cómo leer el árbol</div>', unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div class="reading-card-copy">
+                  <ul>
+                    <li>Cada porcentaje se calcula dentro de la rama anterior.</li>
+                    <li>El nivel de detalle controla cuántas alternativas aparecen.</li>
+                    <li>La ruta principal muestra la secuencia dominante paso a paso.</li>
+                  </ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            row1 = step1[step1["opcion"] == route_first]
-            pct1 = float(row1.iloc[0]["porcentaje"]) if len(row1) else 0.0
-
-            target1 = filtered[filtered["decision_1"] == route_first].copy()
-            ref1 = base_reference[base_reference["decision_1"] == route_first].copy()
-            step2, _, _ = conditional_reading(
-                target1,
-                ref1,
-                base_reference,
-                "decision_2",
-                force_tendential=is_tendential,
-                strength=14.0,
-            )
-            step2 = step2[step2["opcion"] != route_first].reset_index(drop=True)
-            opts2 = step2["opcion"].tolist()
-
-            if opts2:
-                preferred_second = second_name if route_first == first_name and second_name in opts2 else opts2[0]
-                route_second = st.selectbox(
-                    "Después",
-                    opts2,
-                    index=opts2.index(preferred_second),
-                    key="decision_route_second",
-                )
-                row2 = step2[step2["opcion"] == route_second]
-                pct2 = float(row2.iloc[0]["porcentaje"]) if len(row2) else 0.0
-
-                target12 = target1[target1["decision_2"] == route_second].copy()
-                ref12 = ref1[ref1["decision_2"] == route_second].copy()
-                broader = ref1 if len(ref1) else base_reference
-                step3, _, _ = conditional_reading(
-                    target12,
-                    ref12,
-                    broader,
-                    "decision_3",
-                    force_tendential=is_tendential,
-                    strength=12.0,
-                )
-                step3 = step3[~step3["opcion"].isin([route_first, route_second])].reset_index(drop=True)
-                opts3 = step3["opcion"].tolist()
-
-                if opts3:
-                    preferred_third = (
-                        third_name
-                        if route_first == first_name and route_second == second_name and third_name in opts3
-                        else opts3[0]
-                    )
-                    route_third = st.selectbox(
-                        "Cierre",
-                        opts3,
-                        index=opts3.index(preferred_third),
-                        key="decision_route_third",
-                    )
-                    row3 = step3[step3["opcion"] == route_third]
-                    pct3 = float(row3.iloc[0]["porcentaje"]) if len(row3) else 0.0
-
-                    st.markdown(
-                        f"""
-                        <div class="route-flow">
-                          <div class="route-node">
-                            <div class="route-node-label">Primero · Total</div>
-                            <div class="route-node-name">{html.escape(route_first)}</div>
-                            <div class="route-node-value">{pct1:.1f}%</div>
-                          </div>
-                          <div class="route-arrow">→</div>
-                          <div class="route-node">
-                            <div class="route-node-label">Después · Dentro de la rama</div>
-                            <div class="route-node-name">{html.escape(route_second)}</div>
-                            <div class="route-node-value">{pct2:.1f}%</div>
-                          </div>
-                          <div class="route-arrow">→</div>
-                          <div class="route-node">
-                            <div class="route-node-label">Cierre · Dentro de la rama</div>
-                            <div class="route-node-name">{html.escape(route_third)}</div>
-                            <div class="route-node-value">{pct3:.1f}%</div>
-                          </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.caption(
-                        "Los porcentajes son condicionales por etapa. No se multiplican para interpretar la ruta."
-                    )
 
 elif page == "Qué pesa más":
     st.markdown("### Qué pesa más al elegir")
