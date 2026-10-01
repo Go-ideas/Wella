@@ -200,7 +200,7 @@ section[data-testid="stSidebar"] > div,
 .brand-word {font-size:1.45rem;font-weight:800;letter-spacing:.06em;}
 .brand-tag {font-size:.76rem;line-height:1.3;opacity:.86;margin-top:14px;}
 .brand-main {
-    padding:22px 145px 18px 28px;
+    padding:22px 120px 18px 28px;
     display:flex;
     flex-direction:column;
     justify-content:center;
@@ -209,19 +209,19 @@ section[data-testid="stSidebar"] > div,
 }
 .goideas-mark {
     position:absolute;
-    top:17px;
     right:24px;
+    bottom:18px;
     text-align:right;
     line-height:1;
     pointer-events:none;
     z-index:3;
-    opacity:.72;
+    opacity:.68;
 }
 .goideas-mark-main {
-    font-size:.80rem;
+    font-size:.78rem;
     font-weight:700;
-    letter-spacing:.015em;
-    color:#4D6277;
+    letter-spacing:.02em;
+    color:#607385;
 }
 .goideas-mark-sub {
     margin-top:4px;
@@ -758,9 +758,10 @@ section[data-testid="stSidebar"] > div,
     .goideas-mark {
         position:static;
         align-self:flex-end;
-        margin-bottom:8px;
+        margin-top:10px;
+        margin-bottom:0;
         width:max-content;
-        opacity:.65;
+        opacity:.62;
     }
     [class*="st-key-nav_tile_"] {min-height:188px;padding:13px 10px 12px 10px !important;}
     .nav-icon-circle {width:58px;height:58px;}
