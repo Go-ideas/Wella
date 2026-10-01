@@ -175,6 +175,37 @@ section[data-testid="stSidebar"] > div,
 .sidebar-divider {
     height:1px;background:#DDE6EF;margin:13px 0 10px 0;
 }
+.footer-credit {
+    margin-top:28px;
+    padding-top:14px;
+    border-top:1px solid #E3E9EF;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    color:#8A98A6;
+    font-size:.72rem;
+}
+.footer-credit-left {
+    color:#8D99A6;
+}
+.footer-credit-right {
+    text-align:right;
+    line-height:1.15;
+    opacity:.72;
+}
+.footer-credit-kicker {
+    font-size:.60rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin-bottom:3px;
+}
+.footer-credit-brand {
+    font-size:.78rem;
+    font-weight:700;
+    color:#687887;
+    letter-spacing:.015em;
+}
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
@@ -200,35 +231,12 @@ section[data-testid="stSidebar"] > div,
 .brand-word {font-size:1.45rem;font-weight:800;letter-spacing:.06em;}
 .brand-tag {font-size:.76rem;line-height:1.3;opacity:.86;margin-top:14px;}
 .brand-main {
-    padding:22px 120px 18px 28px;
+    padding:22px 28px 18px 28px;
     display:flex;
     flex-direction:column;
     justify-content:center;
     min-width:0;
     position:relative;
-}
-.goideas-mark {
-    position:absolute;
-    right:24px;
-    bottom:18px;
-    text-align:right;
-    line-height:1;
-    pointer-events:none;
-    z-index:3;
-    opacity:.68;
-}
-.goideas-mark-main {
-    font-size:.78rem;
-    font-weight:700;
-    letter-spacing:.02em;
-    color:#607385;
-}
-.goideas-mark-sub {
-    margin-top:4px;
-    font-size:.44rem;
-    font-weight:600;
-    letter-spacing:.11em;
-    color:#8A98A6;
 }
 .brand-kicker {
     font-size:.82rem;
@@ -755,14 +763,6 @@ section[data-testid="stSidebar"] > div,
 }
 @media (max-width: 900px) {
     .brand-main {padding:20px 22px 18px 22px;}
-    .goideas-mark {
-        position:static;
-        align-self:flex-end;
-        margin-top:10px;
-        margin-bottom:0;
-        width:max-content;
-        opacity:.62;
-    }
     [class*="st-key-nav_tile_"] {min-height:188px;padding:13px 10px 12px 10px !important;}
     .nav-icon-circle {width:58px;height:58px;}
     .nav-icon-circle svg {width:30px !important;height:30px !important;}
@@ -809,9 +809,6 @@ st.markdown(
         <div class="brand-tag">DECISIÓN DE COMPRA<br>COLORACIÓN</div>
       </div>
       <div class="brand-main">
-        <div class="goideas-mark">
-          <div class="goideas-mark-main">Go-Ideas</div>
-        </div>
         <div class="brand-kicker">Resumen ejecutivo</div>
         <div class="brand-title">Así deciden la compra de tintes para cabello</div>
         <div class="brand-sub">Una visión clara de qué consideran, qué genera valor y qué puede cambiar su elección.</div>
@@ -2304,3 +2301,17 @@ elif page == "Cómo ordenar el anaquel":
 
     st.caption("Esta lectura permite comparar qué formas de organización resultan más útiles para encontrar el producto.")
 
+
+
+st.markdown(
+    '''
+    <div class="footer-credit">
+      <div class="footer-credit-left">Wella · Decision Simulator</div>
+      <div class="footer-credit-right">
+        <div class="footer-credit-kicker">Desarrollado por</div>
+        <div class="footer-credit-brand">Go-Ideas</div>
+      </div>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
