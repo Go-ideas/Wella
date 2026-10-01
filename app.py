@@ -1204,7 +1204,7 @@ def decision_tree_figure(
         step1 = step1.head(top_d1).copy()
 
     branches = []
-    for _, r1 in step1.iterrows():
+    for d1_idx, (_, r1) in enumerate(step1.iterrows()):
         d1 = str(r1["opcion"])
         target1 = data[data["decision_1"] == d1].copy()
         ref1 = reference_data[reference_data["decision_1"] == d1].copy()
@@ -1217,10 +1217,12 @@ def decision_tree_figure(
             force_tendential=force_tendential,
             strength=14.0,
         )
-        step2 = step2[step2["opcion"] != d1].head(top_d2).copy()
+        step2 = step2[step2["opcion"] != d1].copy()
+        d2_limit = top_d2 if d1_idx == 0 else max(1, top_d2 - 1)
+        step2 = step2.head(d2_limit).copy()
 
         children2 = []
-        for _, r2 in step2.iterrows():
+        for d2_idx, (_, r2) in enumerate(step2.iterrows()):
             d2 = str(r2["opcion"])
             target12 = target1[target1["decision_2"] == d2].copy()
             ref12 = ref1[ref1["decision_2"] == d2].copy()
@@ -1234,7 +1236,9 @@ def decision_tree_figure(
                 force_tendential=force_tendential,
                 strength=12.0,
             )
-            step3 = step3[~step3["opcion"].isin([d1, d2])].head(top_d3).copy()
+            step3 = step3[~step3["opcion"].isin([d1, d2])].copy()
+            d3_limit = top_d3 if d1_idx == 0 and d2_idx == 0 else 1
+            step3 = step3.head(d3_limit).copy()
 
             children3 = [
                 {
@@ -1324,10 +1328,19 @@ def decision_tree_figure(
     text_color = "#163B60"
 
     def add_edge(x0, y0, x1, y1, pct, *, highlight=False):
-        bend = (x1 - x0) * 0.35
-        xs = [x0, x0 + bend, x1 - bend, x1]
-        ys = [y0, y0, y1, y1]
-        width = (4.4 if highlight else 1.7) + min(1.4, max(0.0, pct) / 45.0)
+        dx = x1 - x0
+        c1x, c1y = x0 + dx * 0.34, y0
+        c2x, c2y = x1 - dx * 0.34, y1
+        ts = [i / 24 for i in range(25)]
+        xs = [
+            ((1-t)**3)*x0 + 3*((1-t)**2)*t*c1x + 3*(1-t)*(t**2)*c2x + (t**3)*x1
+            for t in ts
+        ]
+        ys = [
+            ((1-t)**3)*y0 + 3*((1-t)**2)*t*c1y + 3*(1-t)*(t**2)*c2y + (t**3)*y1
+            for t in ts
+        ]
+        width = (4.0 if highlight else 1.55) + min(1.1, max(0.0, pct) / 55.0)
         fig.add_trace(go.Scatter(
             x=xs,
             y=ys,
@@ -1335,8 +1348,7 @@ def decision_tree_figure(
             line=dict(
                 width=width,
                 color=main_blue if highlight else other_line,
-                shape="spline",
-                smoothing=0.75,
+                shape="linear",
             ),
             hoverinfo="skip",
             showlegend=False,
@@ -1359,7 +1371,12 @@ def decision_tree_figure(
             )
             return
 
-        wrapped = _wrap_tree_label(label, width=24)
+        display_label = (
+            str(label)
+            .replace("Mi experiencia previa con el producto", "Mi experiencia previa")
+            .replace("La necesidad que quería resolver", "Necesidad que quería resolver")
+        )
+        wrapped = _wrap_tree_label(display_label, width=22)
         card_text = (
             f"<b>{wrapped}</b>"
             f"<br><span style='color:{main_blue if highlight else '#315574'}'><b>{pct:.1f}%</b></span>"
@@ -1376,7 +1393,7 @@ def decision_tree_figure(
             borderwidth=1.5 if highlight else 1,
             borderpad=8,
             font=dict(size=11.5, color=text_color),
-            width=190,
+            width=176,
         )
         fig.add_trace(go.Scatter(
             x=[x],
@@ -1459,14 +1476,14 @@ def decision_tree_figure(
         for d1 in branches
         for d2 in d1["children"]
     )
-    height = min(760, max(500, 380 + leaf_count * 22))
+    height = min(940, max(540, 300 + leaf_count * 78))
 
     fig.update_layout(
         height=height,
-        margin=dict(l=28, r=28, t=78, b=25),
+        margin=dict(l=24, r=44, t=78, b=25),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        xaxis=dict(range=[-0.05, 4.03], visible=False, fixedrange=True),
+        xaxis=dict(range=[-0.05, 4.12], visible=False, fixedrange=True),
         yaxis=dict(range=[0.04, 1.10], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
