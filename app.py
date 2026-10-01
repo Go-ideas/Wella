@@ -760,12 +760,41 @@ section[data-testid="stSidebar"] > div,
 .shelf-meta-label{font-size:.66rem;color:#7B90A6;margin-bottom:3px}
 .shelf-meta-value{font-size:.98rem;font-weight:800;color:#173A5E}
 .shelf-top-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
-.shelf-top-card{border:1px solid #DCE6EF;border-radius:18px;background:#FFF;padding:15px 16px;min-height:120px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;box-shadow:0 4px 14px rgba(22,56,88,.035)}
-.shelf-rank{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#E8F3FC;color:#1D6FB5}
-.shelf-card-kicker{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#758AA1;margin-bottom:5px}
-.shelf-card-name{font-size:.92rem;line-height:1.2;font-weight:800;color:#173A5E}
-.shelf-card-value{font-size:1.30rem;font-weight:800;color:#0F65AA;white-space:nowrap;text-align:right}
-.shelf-card-note{font-size:.68rem;color:#8090A2;margin-top:5px;line-height:1.25}
+.shelf-top-card{
+    border:1px solid #DCE6EF;
+    border-radius:18px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
+    padding:16px 16px 14px;
+    min-height:146px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    box-shadow:0 4px 14px rgba(22,56,88,.035)
+}
+.shelf-top-card:first-child{
+    border-color:#A9CFEF;
+    background:linear-gradient(180deg,#F7FBFF 0%,#EEF7FF 100%);
+    box-shadow:0 8px 22px rgba(29,118,190,.08)
+}
+.shelf-card-topline{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.shelf-card-titlewrap{display:flex;align-items:center;gap:10px;min-width:0}
+.shelf-rank{
+    width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.80rem;font-weight:800;background:#E8F3FC;color:#1D6FB5;flex:0 0 auto
+}
+.shelf-top-card:first-child .shelf-rank{background:#1D76BE;color:#FFF}
+.shelf-card-kicker{font-size:.64rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#758AA1;margin-bottom:4px}
+.shelf-card-name{font-size:.94rem;line-height:1.2;font-weight:800;color:#173A5E}
+.shelf-card-value{font-size:1.52rem;font-weight:800;color:#0F65AA;white-space:nowrap;text-align:right;line-height:1}
+.shelf-card-metrics{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.shelf-card-chip{
+    display:inline-flex;align-items:center;gap:4px;
+    border-radius:999px;padding:5px 8px;
+    background:#F4F8FB;border:1px solid #DFE8F0;
+    font-size:.63rem;color:#60778D;font-weight:700
+}
+.shelf-card-chip strong{color:#173A5E}
 .st-key-shelf_rank_panel [data-testid="stVerticalBlockBorderWrapper"],
 .st-key-shelf_combo_panel [data-testid="stVerticalBlockBorderWrapper"],
 .st-key-shelf_friction_panel [data-testid="stVerticalBlockBorderWrapper"]{
@@ -781,20 +810,28 @@ section[data-testid="stSidebar"] > div,
 .shelf-kpi-label{font-size:.68rem;color:#7A8EA4;line-height:1.25}
 .shelf-kpi-value{font-size:1.25rem;font-weight:800;color:#153A60;margin-top:4px}
 .shelf-ease-box{display:flex;align-items:center;gap:12px;border:1px solid #DCE6EF;background:#F7FBFF;border-radius:16px;padding:14px 15px;margin-bottom:10px}
+.shelf-friction-alert{
+    border:1px solid #F0D9DC;background:#FFF7F8;border-radius:15px;
+    padding:11px 13px;margin:10px 0 12px;
+    display:flex;align-items:center;gap:10px
+}
+.shelf-friction-alert-main{font-size:.78rem;font-weight:800;color:#7D3140;line-height:1.3}
+.shelf-friction-alert-sub{font-size:.66rem;color:#9A6570;margin-top:2px}
 .shelf-ease-value{font-size:1.55rem;font-weight:800;color:#0F65AA}
 .shelf-ease-copy{font-size:.78rem;line-height:1.35;color:#60778D}
 .shelf-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E;margin-top:10px}
 .shelf-insight b{color:#153A60}
 .shelf-mode-note{
-    border:1px solid #DCE6EF;
-    background:#F8FBFE;
+    border:1px solid #D7E6F2;
+    background:linear-gradient(90deg,#F5FAFE,#FFFFFF);
     border-radius:14px;
     padding:10px 12px;
     margin:10px 0 12px;
-    font-size:.74rem;
-    line-height:1.4;
+    font-size:.72rem;
+    line-height:1.42;
     color:#60778D;
 }
+.shelf-mode-main{font-weight:800;color:#315E84}
 .shelf-stat-grid{
     margin-top:12px;
     display:grid;
@@ -803,28 +840,43 @@ section[data-testid="stSidebar"] > div,
 }
 .shelf-stat-card{
     border:1px solid #E2EAF2;
-    border-radius:14px;
+    border-radius:15px;
     background:#FFF;
-    padding:11px 12px;
+    padding:12px 13px;
+    min-height:112px;
 }
+.shelf-stat-card.primary{background:#F6FBFF;border-color:#CFE3F4}
+.shelf-stat-card.secondary{background:#FAF8FF;border-color:#E5DFF8}
+.shelf-stat-card.affinity{background:#F8FBF9;border-color:#D9EADF}
 .shelf-stat-label{
-    font-size:.65rem;
+    font-size:.63rem;
     font-weight:800;
     color:#6F849A;
     text-transform:uppercase;
     letter-spacing:.04em;
 }
 .shelf-stat-value{
-    margin-top:4px;
-    font-size:1.15rem;
+    margin-top:5px;
+    font-size:1.30rem;
     font-weight:800;
     color:#173A5E;
+    line-height:1
 }
 .shelf-stat-note{
-    margin-top:4px;
-    font-size:.64rem;
-    line-height:1.3;
+    margin-top:7px;
+    font-size:.65rem;
+    line-height:1.34;
     color:#7A8EA4;
+}
+.shelf-stat-status{
+    display:inline-flex;
+    margin-top:7px;
+    border-radius:999px;
+    padding:4px 7px;
+    font-size:.60rem;
+    font-weight:800;
+    background:#EEF4F8;
+    color:#58738C
 }
 .shelf-method-badge{
     display:inline-flex;
@@ -862,8 +914,17 @@ section[data-testid="stSidebar"] > div,
     padding:8px 12px;
     background:#E8F3FC;
     color:#155E98;
-    font-size:.76rem;
+    font-size:.74rem;
     font-weight:800;
+}
+.shelf-reco-summary{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap
+}
+.shelf-confidence-pill{
+    display:inline-flex;align-items:center;
+    border-radius:999px;padding:7px 10px;
+    background:#F4F8FB;border:1px solid #DCE6EF;
+    color:#60778D;font-size:.67rem;font-weight:700
 }
 .shelf-visual-help{
     font-size:.70rem;
@@ -3358,7 +3419,7 @@ elif page == "Cómo ordenar el anaquel":
             <div>
               <div class="shelf-header-kicker">Anaquel</div>
               <div class="shelf-header-title">Cómo facilitar la compra en anaquel</div>
-              <div class="shelf-header-sub">Convierte A1/A2 en una recomendación estadística de organización y valida dónde persisten fricciones de búsqueda.</div>
+              <div class="shelf-header-sub">Recomienda cómo estructurar el anaquel, qué tan sólida es esa recomendación y dónde persisten fricciones de búsqueda.</div>
             </div>
           </div>
           <div class="shelf-meta">
@@ -3373,16 +3434,22 @@ elif page == "Cómo ordenar el anaquel":
     top3 = stat_rank.head(3).copy()
     cards = '<div class="shelf-top-grid">'
     for rank, (_, row) in enumerate(top3.iterrows(), start=1):
+        stability = float(row["estabilidad_top1"])
         cards += (
             '<div class="shelf-top-card">'
+            '<div class="shelf-card-topline">'
+            '<div class="shelf-card-titlewrap">'
             f'<div class="shelf-rank">{rank}</div>'
             '<div>'
-            f'<div class="shelf-card-kicker">Recomendación #{rank}</div>'
+            f'<div class="shelf-card-kicker">{"Recomendación principal" if rank == 1 else f"Alternativa #{rank}"}</div>'
             f'<div class="shelf-card-name">{html.escape(str(row["organizacion"]))}</div>'
-            f'<div class="shelf-card-note">IC 95%: {float(row["ic_bajo"]):.1f}%–{float(row["ic_alto"]):.1f}% · '
-            f'Estabilidad como #1: {float(row["estabilidad_top1"]):.0f}%</div>'
-            '</div>'
+            '</div></div>'
             f'<div class="shelf-card-value">{float(row["prob_estimada"]):.1f}%</div>'
+            '</div>'
+            '<div class="shelf-card-metrics">'
+            f'<div class="shelf-card-chip">Rango 95% <strong>{float(row["ic_bajo"]):.1f}–{float(row["ic_alto"]):.1f}%</strong></div>'
+            f'<div class="shelf-card-chip">Estabilidad <strong>{stability:.0f}%</strong></div>'
+            '</div>'
             '</div>'
         )
     cards += '</div>'
@@ -3455,9 +3522,10 @@ elif page == "Cómo ordenar el anaquel":
         support_label = remaining[0] if remaining else "Que tenga señalización clara o guías"
 
         st.markdown(
-            f'<div class="shelf-mode-note"><span class="shelf-method-badge">Modelo estadístico</span> '
-            f'La primera capa se estima con un modelo de ranking A1→A2; la segunda se estima condicionada a '
-            f'<b>{html.escape(primary)}</b>. En bases pequeñas se estabiliza la lectura hacia el total.</div>',
+            f'<div class="shelf-mode-note"><span class="shelf-method-badge">Recomendación estadística</span> '
+            f'<span class="shelf-mode-main">{html.escape(primary)}</span> se propone como primera capa y '
+            f'<span class="shelf-mode-main">{html.escape(secondary)}</span> como segunda. '
+            f'La recomendación se recalcula con los filtros activos y se estabiliza cuando la base es pequeña.</div>',
             unsafe_allow_html=True,
         )
 
@@ -3503,8 +3571,11 @@ elif page == "Cómo ordenar el anaquel":
         visual_html = (
             '<div class="shelf-visual-shell">'
             '<div class="shelf-visual-top">'
-            f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} Organización principal: {html.escape(primary)}</div>'
-            '<div class="shelf-visual-help">Esquema dinámico basado en A1/A2 y los filtros activos.</div>'
+            '<div class="shelf-reco-summary">'
+            f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} Recomendación: {html.escape(primary)} → {html.escape(secondary)}</div>'
+            f'<div class="shelf-confidence-pill">Estabilidad de la primera capa: {primary_stability:.0f}%</div>'
+            '</div>'
+            '<div class="shelf-visual-help">Cambia automáticamente con los filtros y el modo seleccionado.</div>'
             '</div>'
             '<div class="shelf-unit">'
             '<div class="shelf-unit-label"><div class="shelf-unit-num">1</div><div>'
@@ -3525,23 +3596,25 @@ elif page == "Cómo ordenar el anaquel":
             + _blocks_html(support_blocks, "support")
             + '</div>'
             '<div class="shelf-stat-grid">'
-            '<div class="shelf-stat-card">'
-            '<div class="shelf-stat-label">Primera recomendación</div>'
+            '<div class="shelf-stat-card primary">'
+            '<div class="shelf-stat-label">Fuerza de la primera capa</div>'
             f'<div class="shelf-stat-value">{primary_prob:.1f}%</div>'
-            f'<div class="shelf-stat-note">Probabilidad estimada de ser la primera ayuda. IC 95%: {primary_low:.1f}%–{primary_high:.1f}%. '
-            f'Estabilidad como #1: {primary_stability:.0f}%.</div>'
+            f'<div class="shelf-stat-note">Probabilidad estimada de que {html.escape(primary)} sea la primera ayuda. '
+            f'Rango 95%: {primary_low:.1f}%–{primary_high:.1f}%.</div>'
+            f'<div class="shelf-stat-status">Estabilidad: {primary_stability:.0f}%</div>'
             '</div>'
-            '<div class="shelf-stat-card">'
-            '<div class="shelf-stat-label">Segunda capa condicionada</div>'
+            '<div class="shelf-stat-card secondary">'
+            '<div class="shelf-stat-label">Siguiente paso recomendado</div>'
             f'<div class="shelf-stat-value">{secondary_prob:.1f}%</div>'
-            f'<div class="shelf-stat-note">Probabilidad estimada de elegir {html.escape(secondary)} después de {html.escape(primary)}. '
-            f'IC 95%: {secondary_low:.1f}%–{secondary_high:.1f}%. Base de la rama: {branch_n}.</div>'
+            f'<div class="shelf-stat-note">Probabilidad de elegir {html.escape(secondary)} después de {html.escape(primary)}. '
+            f'Rango 95%: {secondary_low:.1f}%–{secondary_high:.1f}%.</div>'
+            f'<div class="shelf-stat-status">Base de esta ruta: {branch_n}</div>'
             '</div>'
-            '<div class="shelf-stat-card">'
-            '<div class="shelf-stat-label">Afinidad de combinación</div>'
+            '<div class="shelf-stat-card affinity">'
+            '<div class="shelf-stat-label">Qué tan bien combinan</div>'
             f'<div class="shelf-stat-value">{secondary_lift:.2f}×</div>'
-            f'<div class="shelf-stat-note">Lift frente a la frecuencia promedio de {html.escape(secondary)} como segunda ayuda. '
-            'Más de 1× indica asociación positiva.</div>'
+            f'<div class="shelf-stat-note">Compara esta combinación contra lo esperado. '
+            f'{"Asociación positiva" if secondary_lift > 1.05 else "Asociación similar a lo esperado" if secondary_lift >= 0.95 else "Asociación menor a lo esperado"}.</div>'
             '</div>'
             '</div>'
             '</div>'
@@ -3550,17 +3623,18 @@ elif page == "Cómo ordenar el anaquel":
 
         if shelf_mode == "Orden recomendado":
             st.markdown(
-                f'<div class="shelf-insight">La recomendación actual es <b>{html.escape(primary)}</b> → '
-                f'<b>{html.escape(secondary)}</b>. La primera capa tiene una estabilidad de '
-                f'<b>{primary_stability:.0f}%</b> como #1 en bootstrap; la segunda muestra una afinidad de '
-                f'<b>{secondary_lift:.2f}×</b>.</div>',
+                f'<div class="shelf-insight"><b>Lectura recomendada:</b> organizar primero por '
+                f'<b>{html.escape(primary)}</b> y después apoyar con <b>{html.escape(secondary)}</b>. '
+                f'La primera capa mantiene una estabilidad de <b>{primary_stability:.0f}%</b> y la combinación '
+                f'muestra una afinidad de <b>{secondary_lift:.2f}×</b>.</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                f'<div class="shelf-insight">La configuración probada <b>{html.escape(primary)}</b> → '
-                f'<b>{html.escape(secondary)}</b> tiene una probabilidad condicional de segunda capa de '
-                f'<b>{secondary_prob:.1f}%</b> y una afinidad de <b>{secondary_lift:.2f}×</b>.</div>',
+                f'<div class="shelf-insight"><b>Configuración probada:</b> '
+                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b>. '
+                f'La segunda capa alcanza <b>{secondary_prob:.1f}%</b> dentro de quienes priorizan la primera, '
+                f'con una afinidad de <b>{secondary_lift:.2f}×</b>.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -3575,6 +3649,11 @@ elif page == "Cómo ordenar el anaquel":
         ranked_plot["err_plus"] = ranked_plot["ic_alto"] - ranked_plot["prob_estimada"]
         ranked_plot["err_minus"] = ranked_plot["prob_estimada"] - ranked_plot["ic_bajo"]
 
+        top_org = str(stat_rank.iloc[0]["organizacion"]) if len(stat_rank) else ""
+        bar_colors = [
+            "#1D76BE" if str(org) == top_org else "#A9CFF0"
+            for org in ranked_plot["organizacion"]
+        ]
         fig = go.Figure(
             go.Bar(
                 x=ranked_plot["prob_estimada"],
@@ -3582,6 +3661,7 @@ elif page == "Cómo ordenar el anaquel":
                 orientation="h",
                 text=ranked_plot["prob_estimada"].map(lambda x: f"{float(x):.1f}%"),
                 textposition="outside",
+                marker=dict(color=bar_colors),
                 error_x=dict(
                     type="data",
                     symmetric=False,
@@ -3589,11 +3669,12 @@ elif page == "Cómo ordenar el anaquel":
                     arrayminus=ranked_plot["err_minus"],
                     thickness=1.2,
                     width=3,
+                    color="#8099AF",
                 ),
                 hovertemplate=(
                     "<b>%{y}</b><br>"
                     "Probabilidad estimada: %{x:.1f}%<br>"
-                    "IC 95%: %{customdata[0]:.1f}%–%{customdata[1]:.1f}%<br>"
+                    "Rango 95%: %{customdata[0]:.1f}%–%{customdata[1]:.1f}%<br>"
                     "Estabilidad como #1: %{customdata[2]:.0f}%<extra></extra>"
                 ),
                 customdata=ranked_plot[["ic_bajo", "ic_alto", "estabilidad_top1"]].to_numpy(),
@@ -3610,6 +3691,7 @@ elif page == "Cómo ordenar el anaquel":
         )
         fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("La barra azul oscura identifica la recomendación principal; las líneas muestran el rango de incertidumbre al 95%.")
 
         with st.expander("Ver metodología y lectura descriptiva A1/A2"):
             st.markdown(
@@ -3652,6 +3734,14 @@ elif page == "Cómo ordenar el anaquel":
 
             barriers = barriers.sort_values("porcentaje", ascending=False).reset_index(drop=True)
             barriers["etiqueta"] = barriers["porcentaje"].map(lambda x: f"{float(x):.1f}%")
+
+            lead_barrier = barriers.iloc[0]
+            st.markdown(
+                f'<div class="shelf-friction-alert">{icon_svg("warning", "#B84A5A")}'
+                f'<div><div class="shelf-friction-alert-main">{html.escape(str(lead_barrier["barrera"]))}</div>'
+                f'<div class="shelf-friction-alert-sub">Principal fricción declarada · {float(lead_barrier["porcentaje"]):.1f}%</div></div></div>',
+                unsafe_allow_html=True,
+            )
             fig2 = px.bar(
                 barriers.sort_values("porcentaje"),
                 x="porcentaje",
@@ -3673,7 +3763,6 @@ elif page == "Cómo ordenar el anaquel":
             fig2.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
             st.plotly_chart(fig2, use_container_width=True)
 
-            lead_barrier = barriers.iloc[0]
             st.markdown(
                 f'<div class="shelf-insight">La principal fricción declarada es <b>{html.escape(str(lead_barrier["barrera"]))}</b> '
                 f'({float(lead_barrier["porcentaje"]):.1f}%).</div>',
