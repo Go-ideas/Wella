@@ -63,6 +63,118 @@ section[data-testid="stSidebar"] > div,
     visibility:visible !important;
     opacity:1 !important;
 }
+[data-testid="stSidebar"] .block-container {
+    padding-top:1.1rem !important;
+}
+.sidebar-hero {
+    background:linear-gradient(145deg,#0B3156,#174F7D);
+    color:#FFFFFF;
+    border-radius:20px;
+    padding:18px 17px 16px 17px;
+    margin:2px 0 14px 0;
+    box-shadow:0 10px 24px rgba(16,55,92,.12);
+}
+.sidebar-kicker {
+    font-size:.68rem;
+    letter-spacing:.18em;
+    font-weight:800;
+    opacity:.75;
+    margin-bottom:7px;
+}
+.sidebar-title-row {
+    display:flex;
+    align-items:center;
+    gap:11px;
+}
+.sidebar-icon {
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    background:rgba(255,255,255,.13);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+}
+.sidebar-title {
+    font-size:1.38rem;
+    font-weight:800;
+    line-height:1.05;
+}
+.sidebar-copy {
+    margin-top:9px;
+    font-size:.82rem;
+    line-height:1.38;
+    opacity:.84;
+}
+.sidebar-status-card {
+    border:1px solid #CDE8D7;
+    background:linear-gradient(180deg,#F1FBF5,#E7F7EE);
+    border-radius:15px;
+    padding:11px 13px;
+    margin:0 0 10px 0;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:#21683E;
+}
+.sidebar-status-dot {
+    width:9px;height:9px;border-radius:50%;background:#34A56A;box-shadow:0 0 0 4px rgba(52,165,106,.12);
+}
+.sidebar-status-main {font-size:.84rem;font-weight:800;}
+.sidebar-status-sub {font-size:.7rem;color:#5C7A68;margin-top:1px;}
+.filter-section-label {
+    font-size:.69rem;
+    letter-spacing:.10em;
+    font-weight:800;
+    color:#7890A8;
+    text-transform:uppercase;
+    margin:14px 0 6px 1px;
+}
+.filter-summary-card {
+    margin:14px 0 8px 0;
+    padding:12px 13px;
+    border-radius:15px;
+    background:#FFFFFF;
+    border:1px solid #DCE6EF;
+    box-shadow:0 3px 10px rgba(22,56,88,.04);
+}
+.filter-summary-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+}
+.filter-summary-label {font-size:.72rem;color:#74889D;}
+.filter-summary-value {font-size:1rem;font-weight:800;color:#173A5E;}
+.filter-summary-note {font-size:.7rem;color:#8294A8;margin-top:4px;}
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background:#FFFFFF !important;
+    border:1px solid #D9E4EE !important;
+    border-radius:13px !important;
+    min-height:45px !important;
+    box-shadow:0 2px 7px rgba(23,58,94,.025);
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div:focus-within {
+    border-color:#2E7FBE !important;
+    box-shadow:0 0 0 3px rgba(46,127,190,.10) !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+    background:#E9F3FC !important;
+    color:#155A91 !important;
+    border-radius:9px !important;
+}
+[data-testid="stSidebar"] label p {
+    color:#17324E !important;
+    font-size:.84rem !important;
+    font-weight:700 !important;
+}
+[data-testid="stSidebar"] [data-testid="stButton"] > button {
+    border-radius:12px !important;
+}
+.sidebar-divider {
+    height:1px;background:#DDE6EF;margin:13px 0 10px 0;
+}
 .block-container {padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}
 [data-testid="stMetric"] {background: #F7F9FC; border: 1px solid #E3E8EF; padding: 12px; border-radius: 14px;}
 .small-note {font-size: .82rem; color: #667085;}
@@ -1413,14 +1525,54 @@ st.session_state.pop("unlock_password", None)
 df = st.session_state["dataset"]
 meta = st.session_state["metadata"]
 
+FILTER_WIDGET_KEYS = {col: f"filter_{col}" for col in FILTER_COLUMNS}
+
 with st.sidebar:
-    st.markdown("## 🔎 Filtros")
-    st.caption("Selecciona los cortes que quieres analizar.")
-    st.success("Estudio abierto")
-    if st.button("Cerrar estudio", use_container_width=True):
+    st.markdown(
+        '''
+        <div class="sidebar-hero">
+          <div class="sidebar-kicker">PERSONALIZA LA LECTURA</div>
+          <div class="sidebar-title-row">
+            <div class="sidebar-icon">
+              <svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 5h16M7 12h10M10 19h4" fill="none" stroke="white" stroke-width="1.9" stroke-linecap="round"/>
+                <circle cx="8" cy="5" r="2" fill="#7CC4F2"/>
+                <circle cx="15" cy="12" r="2" fill="#A6D7F6"/>
+                <circle cx="12" cy="19" r="2" fill="#D1EBFB"/>
+              </svg>
+            </div>
+            <div class="sidebar-title">Filtros</div>
+          </div>
+          <div class="sidebar-copy">Define los cortes que quieres analizar y el dashboard se actualizará automáticamente.</div>
+        </div>
+        <div class="sidebar-status-card">
+          <span class="sidebar-status-dot"></span>
+          <div>
+            <div class="sidebar-status-main">Estudio cargado</div>
+            <div class="sidebar-status-sub">Listo para explorar</div>
+          </div>
+        </div>
+        ''',
+        unsafe_allow_html=True,
+    )
+
+    action_cols = st.columns(2)
+    with action_cols[0]:
+        clear_filters = st.button("Limpiar", use_container_width=True, key="clear_filters_btn")
+    with action_cols[1]:
+        close_study = st.button("Cerrar", use_container_width=True, key="close_study_btn")
+
+    if clear_filters:
+        for widget_key in FILTER_WIDGET_KEYS.values():
+            st.session_state[widget_key] = []
+        st.rerun()
+
+    if close_study:
         clear_loaded_data()
         st.rerun()
-    st.divider()
+
+    st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="filter-section-label">Compra</div>', unsafe_allow_html=True)
 
 filters = {}
 filter_labels = {
@@ -1432,14 +1584,45 @@ filter_labels = {
     "nse": "NSE",
     "sexo": "Sexo",
 }
-for col in FILTER_COLUMNS:
+
+for col in ["producto", "marca", "cadena"]:
     opts = options_for(df, col)
-    filters[col] = st.sidebar.multiselect(filter_labels.get(col, col), opts, default=[])
+    filters[col] = st.sidebar.multiselect(
+        filter_labels[col],
+        opts,
+        default=[],
+        key=FILTER_WIDGET_KEYS[col],
+        placeholder="Selecciona una o más opciones",
+    )
+
+st.sidebar.markdown('<div class="filter-section-label">Perfil</div>', unsafe_allow_html=True)
+
+for col in ["edad_rango", "area_nielsen", "nse", "sexo"]:
+    opts = options_for(df, col)
+    filters[col] = st.sidebar.multiselect(
+        filter_labels[col],
+        opts,
+        default=[],
+        key=FILTER_WIDGET_KEYS[col],
+        placeholder="Selecciona una o más opciones",
+    )
 
 filtered = apply_filters(df, filters)
 n = len(filtered)
 quality, quality_note = base_quality(n)
-st.sidebar.markdown(f"**Base seleccionada:** {n} entrevistas")
+active_filter_count = sum(1 for values in filters.values() if values)
+st.sidebar.markdown(
+    f'''
+    <div class="filter-summary-card">
+      <div class="filter-summary-top">
+        <span class="filter-summary-label">Base seleccionada</span>
+        <span class="filter-summary-value">{n} entrevistas</span>
+      </div>
+      <div class="filter-summary-note">{active_filter_count} filtros activos</div>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
 
 if n == 0:
     st.warning("La combinación de filtros no contiene entrevistas.")
@@ -1456,8 +1639,9 @@ if tendential_available:
     reference = apply_filters(df, ref_filters)
     reference = reference[reference["producto"] != selected_products[0]].copy()
     default_index = 0 if n < 30 else 1
+    st.sidebar.markdown('<div class="filter-section-label">Tipo de lectura</div>', unsafe_allow_html=True)
     reading_mode = st.sidebar.radio(
-        "Tipo de lectura",
+        "Selecciona el modo",
         ["Tendencial", "Observada"],
         index=default_index,
         help="Úsala cuando la base del producto sea pequeña para obtener una lectura más estable.",
