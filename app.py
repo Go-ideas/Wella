@@ -79,8 +79,9 @@ if uploaded is None:
 package_bytes = uploaded.getvalue()
 fp = package_fingerprint(package_bytes)
 
-if st.session_state.get("package_fp") != fp:
-    # A newly selected encrypted package invalidates any previous in-memory dataset.
+if "dataset" in st.session_state and st.session_state.get("package_fp") != fp:
+    # Only invalidate an already-loaded dataset when the user selects a different package.
+    # Do not clear the password field while the user is still unlocking the first package.
     clear_loaded_data()
 
 if "dataset" not in st.session_state:
