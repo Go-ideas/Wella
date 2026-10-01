@@ -810,7 +810,6 @@ st.markdown(
       <div class="brand-main">
         <div class="goideas-mark">
           <div class="goideas-mark-main">Go-Ideas</div>
-          <div class="goideas-mark-sub">INSIGHTS · ANALYTICS</div>
         </div>
         <div class="brand-kicker">Resumen ejecutivo</div>
         <div class="brand-title">Así deciden la compra de tintes para cabello</div>
