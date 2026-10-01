@@ -22,6 +22,9 @@ def test_shelf_statistical_model_ranks_dominant_first_choice():
     assert out.iloc[0]["organizacion"] == "Necesidad"
     assert 0 <= out.iloc[0]["ic_bajo"] <= out.iloc[0]["prob_estimada"] <= out.iloc[0]["ic_alto"] <= 100
     assert 0 <= out.iloc[0]["estabilidad_top1"] <= 100
+    assert out.iloc[0]["nivel_recomendacion"] == 100
+    assert 0 <= out.iloc[0]["consistencia"] <= 100
+    assert 0 <= out.iloc[0]["preferencia_relativa"] <= 100
 
 
 def test_shelf_conditional_model_recommends_tone_after_need():
