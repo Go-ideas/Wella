@@ -661,6 +661,48 @@ section[data-testid="stSidebar"] > div,
 }
 @media (max-width:900px){.decision-section-title{align-items:flex-start;flex-direction:column}.main-route-step{grid-template-columns:30px minmax(0,1fr)}}
 @media (max-width:900px){.decision-header{grid-template-columns:1fr}.decision-meta{width:100%}.decision-meta-card{flex:1}.decision-steps{grid-template-columns:1fr}.route-flow{grid-template-columns:1fr}.route-arrow{transform:rotate(90deg)}}
+.drivers-header{
+    border:1px solid #DCE6EF;
+    border-radius:20px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFF 100%);
+    padding:18px 20px;
+    margin:6px 0 14px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:20px;
+    align-items:center;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.drivers-header-main{display:flex;align-items:center;gap:14px;min-width:0}
+.drivers-header-icon{width:54px;height:54px;border-radius:16px;background:#EEF4FF;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.drivers-header-kicker{font-size:.70rem;letter-spacing:.11em;font-weight:800;color:#7890A8;text-transform:uppercase;margin-bottom:4px}
+.drivers-header-title{font-size:1.55rem;line-height:1.08;font-weight:800;color:#12365A;margin-bottom:4px}
+.drivers-header-sub{font-size:.88rem;color:#708399;line-height:1.35}
+.drivers-meta{min-width:145px;border:1px solid #E0E9F1;background:#F7FAFD;border-radius:14px;padding:10px 12px}
+.drivers-meta-label{font-size:.66rem;color:#7B90A6;margin-bottom:3px}
+.drivers-meta-value{font-size:.98rem;font-weight:800;color:#173A5E}
+.driver-top-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 14px}
+.driver-top-card{border:1px solid #DCE6EF;border-radius:18px;background:#FFF;padding:15px 16px;min-height:120px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;box-shadow:0 4px 14px rgba(22,56,88,.035)}
+.driver-rank{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#E8F3FC;color:#1D6FB5}
+.driver-card-kicker{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#758AA1;margin-bottom:5px}
+.driver-card-name{font-size:.94rem;line-height:1.2;font-weight:800;color:#173A5E}
+.driver-card-value{font-size:1.32rem;font-weight:800;color:#0F65AA;white-space:nowrap;text-align:right}
+.driver-card-note{font-size:.68rem;color:#8090A2;margin-top:5px;line-height:1.25}
+.st-key-driver_chart_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-driver_insight_panel [data-testid="stVerticalBlockBorderWrapper"]{
+    border:1px solid #DCE6EF!important;
+    border-radius:20px!important;
+    background:#FFF!important;
+    box-shadow:0 5px 16px rgba(22,56,88,.035);
+}
+.driver-panel-title{font-size:1.08rem;font-weight:800;color:#153A60}
+.driver-panel-sub{font-size:.78rem;color:#74889D;margin-top:2px;margin-bottom:4px}
+.driver-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.48;color:#35516E}
+.driver-insight b{color:#153A60}
+@media(max-width:900px){
+    .drivers-header{grid-template-columns:1fr}
+    .driver-top-grid{grid-template-columns:1fr}
+}
 .panel-head {
     font-size:1.05rem;
     font-weight:800;
@@ -2585,73 +2627,106 @@ elif page == "Cómo se decide":
         )
 
 elif page == "Qué pesa más":
-    st.markdown("### Qué pesa más al elegir")
-    st.caption("Entre más alto es el valor, mayor peso tiene ese factor en la elección del producto.")
-
+    # ===== Drivers clave · MaxDiff =====
     if is_tendential:
-        comp = maxdiff_tendential(filtered, reference)
-        plot = comp.melt(
-            id_vars=["driver"],
-            value_vars=["tendencial", "referencia"],
-            var_name="serie",
-            value_name="valor",
-        )
-        plot["serie"] = plot["serie"].map({"tendencial": "Producto · tendencial", "referencia": "Categoría"})
-        plot["etiqueta"] = plot["valor"].map(lambda x: f"{x:.1f}")
-
-        fig = px.bar(
-            plot,
-            x="valor",
-            y="driver",
-            color="serie",
-            barmode="group",
-            orientation="h",
-            text="etiqueta",
-            title="Factores que más influyen en la elección",
-            labels={"valor": "Importancia", "driver": "", "serie": ""},
-        )
-        fig.update_traces(textposition="outside")
-        fig.update_layout(yaxis={"categoryorder": "total ascending"})
-        polish_bar(fig, height=600)
-        st.plotly_chart(fig, use_container_width=True)
-
-        table = comp[["driver", "observado", "tendencial", "referencia", "delta_vs_referencia"]].rename(
-            columns={
-                "driver": "Factor",
-                "observado": "Dato observado",
-                "tendencial": "Lectura tendencial",
-                "referencia": "Categoría",
-                "delta_vs_referencia": "Diferencia vs categoría",
-            }
-        )
-        st.dataframe(
-            table.style.format({
-                "Dato observado": "{:.1f}",
-                "Lectura tendencial": "{:.1f}",
-                "Categoría": "{:.1f}",
-                "Diferencia vs categoría": "{:+.1f}",
-            }),
-            use_container_width=True,
-            hide_index=True,
-        )
-        st.caption("La lectura tendencial ayuda a comparar estos factores cuando la base del producto es pequeña.")
+        comp = maxdiff_tendential(filtered, reference).copy()
+        comp["actual"] = comp["tendencial"]
+        comp["benchmark"] = comp["referencia"]
+        comp["delta_actual"] = comp["delta_vs_referencia"]
+        benchmark_label = "Categoría"
+        reading_label = "Lectura tendencial"
     else:
-        comp = maxdiff_compare(filtered, df)
-        show_total = st.toggle("Comparar con el total", value=True)
+        comp = maxdiff_compare(filtered, df).copy()
+        comp["actual"] = comp["segmento"]
+        comp["benchmark"] = comp["total"]
+        comp["delta_actual"] = comp["delta"]
+        benchmark_label = "Total"
+        reading_label = "Selección actual"
 
-        if show_total:
-            plot = comp.melt(
+    comp = comp.sort_values("actual", ascending=False).reset_index(drop=True)
+    top3 = comp.head(3).copy()
+    top1_name = str(top3.iloc[0]["driver"]) if len(top3) else "—"
+    top1_value = float(top3.iloc[0]["actual"]) if len(top3) else 0.0
+    top2_name = str(top3.iloc[1]["driver"]) if len(top3) > 1 else "—"
+    top2_value = float(top3.iloc[1]["actual"]) if len(top3) > 1 else 0.0
+    leader_gap = top1_value - top2_value if len(top3) > 1 else 0.0
+
+    st.markdown(
+        f"""
+        <div class="drivers-header">
+          <div class="drivers-header-main">
+            <div class="drivers-header-icon">{icon_svg("diamond", "#1D6FB5")}</div>
+            <div>
+              <div class="drivers-header-kicker">Drivers clave</div>
+              <div class="drivers-header-title">Qué genera mayor valor al elegir</div>
+              <div class="drivers-header-sub">Ordena los factores por su peso relativo en la elección del producto.</div>
+            </div>
+          </div>
+          <div class="drivers-meta">
+            <div class="drivers-meta-label">Base analizada</div>
+            <div class="drivers-meta-value">{n} entrevistas</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    card_html = '<div class="driver-top-grid">'
+    for rank, (_, row) in enumerate(top3.iterrows(), start=1):
+        delta = float(row["delta_actual"])
+        delta_text = (
+            f"{delta:+.1f} vs {benchmark_label}"
+            if abs(delta) >= 0.05
+            else f"En línea con {benchmark_label.lower()}"
+        )
+        card_html += (
+            '<div class="driver-top-card">'
+            f'<div class="driver-rank">{rank}</div>'
+            '<div>'
+            f'<div class="driver-card-kicker">Driver #{rank}</div>'
+            f'<div class="driver-card-name">{html.escape(str(row["driver"]))}</div>'
+            f'<div class="driver-card-note">{html.escape(delta_text)}</div>'
+            '</div>'
+            f'<div class="driver-card-value">{float(row["actual"]):.1f}</div>'
+            '</div>'
+        )
+    card_html += '</div>'
+    st.markdown(card_html, unsafe_allow_html=True)
+
+    with st.container(key="driver_chart_panel", border=True):
+        h1, h2 = st.columns([1.25, .75])
+        with h1:
+            st.markdown('<div class="driver-panel-title">Ranking de importancia</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="driver-panel-sub">Mayor score = mayor peso relativo en la decisión.</div>',
+                unsafe_allow_html=True,
+            )
+        with h2:
+            compare_mode = st.segmented_control(
+                "Lectura",
+                options=[reading_label, f"Comparar con {benchmark_label.lower()}"],
+                default=f"Comparar con {benchmark_label.lower()}",
+                key="driver_compare_mode",
+            )
+
+        if compare_mode == reading_label:
+            plot = comp[["driver", "actual"]].rename(columns={"actual": "valor"}).copy()
+            plot["serie"] = reading_label
+        else:
+            plot = comp[["driver", "actual", "benchmark"]].melt(
                 id_vars=["driver"],
-                value_vars=["segmento", "total"],
+                value_vars=["actual", "benchmark"],
                 var_name="serie",
                 value_name="valor",
             )
-            plot["serie"] = plot["serie"].map({"segmento": "Selección actual", "total": "Total"})
-        else:
-            plot = comp[["driver", "segmento"]].rename(columns={"segmento": "valor"})
-            plot["serie"] = "Selección actual"
+            plot["serie"] = plot["serie"].map({
+                "actual": reading_label,
+                "benchmark": benchmark_label,
+            })
 
         plot["etiqueta"] = plot["valor"].map(lambda x: f"{x:.1f}")
+        order = comp["driver"].tolist()
+
         fig = px.bar(
             plot,
             x="valor",
@@ -2660,28 +2735,79 @@ elif page == "Qué pesa más":
             barmode="group",
             orientation="h",
             text="etiqueta",
-            title="Factores que más influyen en la elección",
-            labels={"valor": "Importancia", "driver": "", "serie": ""},
+            labels={"valor": "Score de importancia", "driver": "", "serie": ""},
         )
-        fig.update_traces(textposition="outside")
-        fig.update_layout(yaxis={"categoryorder": "total ascending"})
-        polish_bar(fig, height=600)
+        fig.update_traces(textposition="outside", cliponaxis=False)
+        fig.update_layout(
+            yaxis=dict(
+                categoryorder="array",
+                categoryarray=list(reversed(order)),
+            ),
+            legend_title_text="",
+            margin=dict(l=10, r=70, t=18, b=28),
+            height=max(470, 72 + len(comp) * 42),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+        )
+        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False)
         st.plotly_chart(fig, use_container_width=True)
 
-        table = comp[["driver", "segmento", "total", "delta"]].rename(
-            columns={
-                "driver": "Factor",
-                "segmento": "Selección actual",
-                "total": "Total",
-                "delta": "Diferencia",
-            }
-        )
+    if len(comp):
+        biggest_up = comp.sort_values("delta_actual", ascending=False).iloc[0]
+        biggest_down = comp.sort_values("delta_actual", ascending=True).iloc[0]
+        insight_parts = [
+            f"<b>{html.escape(top1_name)}</b> lidera con un score de <b>{top1_value:.1f}</b>."
+        ]
+        if len(top3) > 1:
+            if leader_gap >= 3:
+                insight_parts.append(
+                    f"La ventaja frente a <b>{html.escape(top2_name)}</b> es marcada ({leader_gap:.1f} puntos)."
+                )
+            else:
+                insight_parts.append(
+                    f"<b>{html.escape(top2_name)}</b> se mantiene cerca ({leader_gap:.1f} puntos de diferencia)."
+                )
+
+        if abs(float(biggest_up["delta_actual"])) >= 0.5:
+            insight_parts.append(
+                f"El mayor sobreíndice frente a {benchmark_label.lower()} está en "
+                f"<b>{html.escape(str(biggest_up['driver']))}</b> ({float(biggest_up['delta_actual']):+.1f})."
+            )
+
+        with st.container(key="driver_insight_panel", border=True):
+            st.markdown('<div class="driver-panel-title">Lectura clave</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="driver-insight">{" ".join(insight_parts)}</div>',
+                unsafe_allow_html=True,
+            )
+
+    with st.expander("Ver detalle numérico"):
+        if is_tendential:
+            table = comp[["driver", "observado", "actual", "benchmark", "delta_actual"]].rename(
+                columns={
+                    "driver": "Factor",
+                    "observado": "Dato observado",
+                    "actual": "Lectura tendencial",
+                    "benchmark": benchmark_label,
+                    "delta_actual": f"Diferencia vs {benchmark_label.lower()}",
+                }
+            )
+        else:
+            table = comp[["driver", "actual", "benchmark", "delta_actual"]].rename(
+                columns={
+                    "driver": "Factor",
+                    "actual": reading_label,
+                    "benchmark": benchmark_label,
+                    "delta_actual": "Diferencia",
+                }
+            )
         st.dataframe(
-            table.style.format({"Selección actual": "{:.1f}", "Total": "{:.1f}", "Diferencia": "{:+.1f}"}),
+            table.style.format({col: "{:.1f}" for col in table.columns if col != "Factor"}),
             use_container_width=True,
             hide_index=True,
         )
-        st.caption("El valor sirve para comparar la importancia relativa de los factores: un número mayor significa que ese factor pesa más.")
+
+    st.caption("Los scores MaxDiff expresan importancia relativa: se usan para ordenar y comparar factores, no como porcentajes de mención.")
 
 elif page == "Qué pasa si falta...":
     language = product_language(filters)
