@@ -628,6 +628,37 @@ section[data-testid="stSidebar"] > div,
 .decision-explore-copy{font-size:.78rem;color:#668097;line-height:1.35}
 .decision-dynamic-insight{margin-top:12px;border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.45;color:#35516E}
 .decision-dynamic-insight b{color:#153A60}
+.tree-column-heads{
+    display:grid;
+    grid-template-columns:.72fr 1fr 1fr 1fr;
+    gap:26px;
+    align-items:stretch;
+    margin:12px 8px 18px 8px;
+}
+.tree-column-head{
+    background:#F3F7FB;
+    border:1px solid #E7EEF5;
+    border-radius:12px;
+    padding:10px 12px 9px;
+    text-align:center;
+}
+.tree-column-title{
+    font-size:.80rem;
+    font-weight:800;
+    color:#35516E;
+    line-height:1.15;
+}
+.tree-column-sub{
+    margin-top:4px;
+    font-size:.66rem;
+    color:#8092A6;
+    line-height:1.2;
+}
+@media(max-width:900px){
+    .tree-column-heads{gap:8px;grid-template-columns:.72fr 1fr 1fr 1fr}
+    .tree-column-head{padding:8px 6px}
+    .tree-column-sub{display:none}
+}
 @media (max-width:900px){.decision-section-title{align-items:flex-start;flex-direction:column}.main-route-step{grid-template-columns:30px minmax(0,1fr)}}
 @media (max-width:900px){.decision-header{grid-template-columns:1fr}.decision-meta{width:100%}.decision-meta-card{flex:1}.decision-steps{grid-template-columns:1fr}.route-flow{grid-template-columns:1fr}.route-arrow{transform:rotate(90deg)}}
 .panel-head {
@@ -1232,6 +1263,7 @@ def decision_tree_figure(
     top_d2: int = 2,
     top_d3: int = 2,
     highlight_path: tuple[str | None, str | None, str | None] | None = None,
+    detail_mode: str = "Medio",
 ) -> go.Figure:
     """Árbol ejecutivo con tarjetas y probabilidades condicionales por rama."""
 
@@ -1345,12 +1377,25 @@ def decision_tree_figure(
     # Así cada nodo conserva una separación mínima en píxeles aunque cambie
     # el tamaño de la ventana, el nivel de detalle o la cantidad de ramas.
     cursor = 0.0
-    # Separación vertical: suficiente para que las tarjetas de Cierre no se toquen,
-    # sin volver a abrir demasiado todo el árbol.
-    leaf_gap = 1.10
-    closure_gap = 1.55
-    d2_group_gap = 0.34
-    branch_gap = 0.60
+    # La densidad se adapta al nivel elegido por el cliente.
+    if detail_mode == "Simple":
+        leaf_gap = 0.92
+        closure_gap = 1.15
+        d2_group_gap = 0.16
+        branch_gap = 0.42
+        px_per_unit = 61
+    elif detail_mode == "Amplio":
+        leaf_gap = 1.04
+        closure_gap = 1.42
+        d2_group_gap = 0.30
+        branch_gap = 0.58
+        px_per_unit = 67
+    else:
+        leaf_gap = 0.98
+        closure_gap = 1.28
+        d2_group_gap = 0.22
+        branch_gap = 0.50
+        px_per_unit = 64
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -1535,27 +1580,6 @@ def decision_tree_figure(
                     highlight=h3,
                 )
 
-    # Encabezados de columnas.
-    for x, title, subtitle in [
-        (x_root, "Inicio", "Todos"),
-        (x_d1, "Primero", "¿Qué aparece primero?"),
-        (x_d2, "Después", "¿Qué sigue?"),
-        (x_d3, "Cierre", "¿Qué termina definiendo?"),
-    ]:
-        fig.add_annotation(
-            x=x, y=-1.18,
-            text=f"<b>{title}</b><br><span style='font-size:10px;color:#8092A6'>{subtitle}</span>",
-            showarrow=False,
-            xanchor="center",
-            yanchor="middle",
-            align="center",
-            bgcolor="#F3F7FB",
-            bordercolor="#F3F7FB",
-            borderpad=7,
-            font=dict(size=12, color="#35516E"),
-            width=190 if x != x_root else 135,
-        )
-
     # Leyenda de lectura.
     fig.add_trace(go.Scatter(
         x=[None], y=[None], mode="lines",
@@ -1570,18 +1594,20 @@ def decision_tree_figure(
         showlegend=True,
     ))
 
-    # Separación compacta pero segura: el cierre conserva aire suficiente entre tarjetas.
-    vertical_span = max_y + 2.05
-    height = int(max(560, min(1650, 165 + vertical_span * 70)))
+    # Alto dinámico: Simple compacto, Amplio abre sólo lo necesario.
+    vertical_span = max_y + 0.95
+    min_height = 500 if detail_mode == "Simple" else 540 if detail_mode == "Medio" else 590
+    max_height = 1150 if detail_mode == "Simple" else 1450 if detail_mode == "Medio" else 1750
+    height = int(max(min_height, min(max_height, 150 + vertical_span * px_per_unit)))
 
     fig.update_layout(
         height=height,
-        margin=dict(l=24, r=44, t=78, b=28),
+        margin=dict(l=24, r=44, t=30, b=26),
         plot_bgcolor="white",
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
-        # Rango invertido: encabezados arriba (-1.05) y ramas hacia abajo.
-        yaxis=dict(range=[max_y + 0.68, -1.62], visible=False, fixedrange=True),
+        # Los encabezados viven fuera del gráfico; aquí sólo queda el árbol.
+        yaxis=dict(range=[max_y + 0.42, -0.42], visible=False, fixedrange=True),
         hovermode="closest",
         legend=dict(
             orientation="h",
@@ -2491,6 +2517,30 @@ elif page == "Cómo se decide":
             unsafe_allow_html=True,
         )
 
+        st.markdown(
+            """
+            <div class="tree-column-heads">
+              <div class="tree-column-head">
+                <div class="tree-column-title">Inicio</div>
+                <div class="tree-column-sub">Todos</div>
+              </div>
+              <div class="tree-column-head">
+                <div class="tree-column-title">Primero</div>
+                <div class="tree-column-sub">¿Qué aparece primero?</div>
+              </div>
+              <div class="tree-column-head">
+                <div class="tree-column-title">Después</div>
+                <div class="tree-column-sub">¿Qué sigue?</div>
+              </div>
+              <div class="tree-column-head">
+                <div class="tree-column-title">Cierre</div>
+                <div class="tree-column-sub">¿Qué termina definiendo?</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         tree_fig = decision_tree_figure(
             filtered,
             base_reference,
@@ -2500,6 +2550,7 @@ elif page == "Cómo se decide":
             top_d2=top_d2,
             top_d3=top_d3,
             highlight_path=highlight_path,
+            detail_mode=detail,
         )
         tree_fig.update_layout(
             title=None,
