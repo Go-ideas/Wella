@@ -328,3 +328,117 @@ def friction_tendential(target: pd.DataFrame, reference: pd.DataFrame) -> tuple[
     rbar = reference[reference["barrera_principal"].notna()].copy()
     barriers = categorical_tendential(tbar, rbar, "barrera_principal", label_name="barrera")
     return easy, barriers
+
+
+def _smoothed_distribution(counts: pd.Series, prior: pd.Series, strength: float) -> pd.Series:
+    """Dirichlet posterior mean using a pooled prior."""
+    idx = sorted(set(counts.index).union(set(prior.index)))
+    counts = counts.reindex(idx, fill_value=0.0).astype(float)
+    prior = prior.reindex(idx, fill_value=0.0).astype(float)
+    if prior.sum() <= 0:
+        prior[:] = 1.0
+    prior = prior / prior.sum()
+    post = counts + prior * float(strength)
+    return post / post.sum() if post.sum() > 0 else post
+
+
+def probabilistic_routes(
+    data: pd.DataFrame,
+    reference: pd.DataFrame | None = None,
+    *,
+    top_n: int = 12,
+    strength_d1: float = 6.0,
+    strength_d2: float = 10.0,
+    strength_d3: float = 12.0,
+) -> pd.DataFrame:
+    """Estimate D1→D2→D3 route probabilities with hierarchical smoothing.
+
+    D1 is estimated from its marginal distribution.
+    D2 is estimated conditionally on D1, shrinking toward the pooled D2 pattern.
+    D3 is estimated conditionally on D1+D2, shrinking toward the pooled D3|D2 pattern.
+    This avoids relying only on exact three-cell route counts.
+    """
+    d = data[["decision_1", "decision_2", "decision_3"]].dropna().copy()
+    if d.empty:
+        return pd.DataFrame(
+            columns=[
+                "ruta",
+                "probabilidad",
+                "alcance_por_1000",
+                "prob_acumulada",
+                "d1",
+                "d2",
+                "d3",
+            ]
+        )
+
+    ref = reference if reference is not None and len(reference) else data
+    r = ref[["decision_1", "decision_2", "decision_3"]].dropna().copy()
+    if r.empty:
+        r = d.copy()
+
+    # D1 posterior.
+    c1 = d["decision_1"].value_counts()
+    p1_prior = r["decision_1"].value_counts(normalize=True)
+    p1 = _smoothed_distribution(c1, p1_prior, strength_d1)
+
+    # Global priors for later stages.
+    pooled_d2 = r["decision_2"].value_counts(normalize=True)
+    pooled_d3 = r["decision_3"].value_counts(normalize=True)
+
+    rows = []
+    for d1, prob1 in p1.items():
+        sub1 = d[d["decision_1"] == d1]
+        c2 = sub1["decision_2"].value_counts()
+
+        # The questionnaire does not allow repeating D1 in D2.
+        prior2 = pooled_d2.drop(labels=[d1], errors="ignore")
+        p2 = _smoothed_distribution(c2, prior2, strength_d2)
+        p2 = p2.drop(labels=[d1], errors="ignore")
+        if p2.sum() > 0:
+            p2 = p2 / p2.sum()
+
+        for d2, prob2 in p2.items():
+            if d2 == d1:
+                continue
+
+            sub12 = sub1[sub1["decision_2"] == d2]
+            c3 = sub12["decision_3"].value_counts()
+
+            # Prefer pooled D3 conditional on D2 as the prior; if unavailable, use total D3.
+            pooled_cond = r.loc[r["decision_2"] == d2, "decision_3"].value_counts(normalize=True)
+            prior3 = pooled_cond if len(pooled_cond) else pooled_d3
+            prior3 = prior3.drop(labels=[d1, d2], errors="ignore")
+
+            p3 = _smoothed_distribution(c3, prior3, strength_d3)
+            p3 = p3.drop(labels=[d1, d2], errors="ignore")
+            if p3.sum() > 0:
+                p3 = p3 / p3.sum()
+
+            for d3, prob3 in p3.items():
+                if d3 in {d1, d2}:
+                    continue
+                p = float(prob1) * float(prob2) * float(prob3)
+                if p <= 0:
+                    continue
+                rows.append({
+                    "d1": str(d1),
+                    "d2": str(d2),
+                    "d3": str(d3),
+                    "ruta": f"{d1} → {d2} → {d3}",
+                    "probabilidad": p * 100,
+                })
+
+    out = pd.DataFrame(rows)
+    if out.empty:
+        return out
+
+    # Normalize after excluding invalid repeated routes.
+    total_prob = out["probabilidad"].sum()
+    if total_prob > 0:
+        out["probabilidad"] = out["probabilidad"] / total_prob * 100
+
+    out = out.sort_values("probabilidad", ascending=False).reset_index(drop=True)
+    out["alcance_por_1000"] = (out["probabilidad"] * 10).round().astype(int)
+    out["prob_acumulada"] = out["probabilidad"].cumsum()
+    return out.head(top_n).reset_index(drop=True)
