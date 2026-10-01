@@ -367,6 +367,12 @@ footer {visibility:hidden;}
     background:#FFFFFF;
     padding:17px 18px;
     min-width:0;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+}
+.summary-panel > .insight-callout {
+    margin-top:auto !important;
 }
 .panel-head {
     font-size:1.05rem;
