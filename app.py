@@ -57,7 +57,7 @@ st.markdown(
 
 
 def clear_loaded_data() -> None:
-    for key in ["dataset", "metadata", "package_fp", "loaded_name", "db_password"]:
+    for key in ["dataset", "metadata", "package_fp", "loaded_name", "unlock_password"]:
         if key in st.session_state:
             del st.session_state[key]
     gc.collect()
@@ -84,11 +84,17 @@ if st.session_state.get("package_fp") != fp:
     clear_loaded_data()
 
 if "dataset" not in st.session_state:
-    with st.form("unlock_form", clear_on_submit=True):
-        password = st.text_input("2. Clave del archivo", type="password", key="db_password")
-        unlock = st.form_submit_button("Abrir reporteador", type="primary", use_container_width=True)
+    # Keep unlock controls outside a form so stale validation messages disappear
+    # as soon as the user edits the password.
+    password = st.text_input("2. Clave del archivo", type="password", key="unlock_password")
+    unlock = st.button("Abrir reporteador", type="primary", use_container_width=True)
 
     if not unlock:
+        st.caption("Introduce la clave entregada junto con este archivo y después selecciona **Abrir reporteador**.")
+        st.stop()
+
+    if len(password) < 10:
+        st.error("La clave debe contener al menos 10 caracteres.")
         st.stop()
 
     try:
@@ -105,7 +111,6 @@ if "dataset" not in st.session_state:
         st.session_state["metadata"] = meta
         st.session_state["package_fp"] = fp
         st.session_state["loaded_name"] = uploaded.name
-        st.session_state["db_password"] = ""
         st.rerun()
     except (EncryptedPackageError, InvalidDatabase) as exc:
         st.error(str(exc))
@@ -115,6 +120,8 @@ if "dataset" not in st.session_state:
         st.stop()
 
 # From here on, only the analytical dataframe and metadata live in session memory.
+# The password is no longer needed after decryption.
+st.session_state.pop("unlock_password", None)
 df = st.session_state["dataset"]
 meta = st.session_state["metadata"]
 
