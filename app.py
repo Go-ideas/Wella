@@ -24,6 +24,8 @@ from engine import (
     scenario_counts,
     shelf_priority,
     shelf_pair_score,
+    shelf_statistical_model,
+    shelf_conditional_model,
     friction_summary,
 )
 from secure_io import (
@@ -783,6 +785,61 @@ section[data-testid="stSidebar"] > div,
 .shelf-ease-copy{font-size:.78rem;line-height:1.35;color:#60778D}
 .shelf-insight{border:1px solid #DCE6EF;background:linear-gradient(90deg,#F7FBFF,#FFFFFF);border-radius:16px;padding:13px 15px;font-size:.84rem;line-height:1.5;color:#35516E;margin-top:10px}
 .shelf-insight b{color:#153A60}
+.shelf-mode-note{
+    border:1px solid #DCE6EF;
+    background:#F8FBFE;
+    border-radius:14px;
+    padding:10px 12px;
+    margin:10px 0 12px;
+    font-size:.74rem;
+    line-height:1.4;
+    color:#60778D;
+}
+.shelf-stat-grid{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+}
+.shelf-stat-card{
+    border:1px solid #E2EAF2;
+    border-radius:14px;
+    background:#FFF;
+    padding:11px 12px;
+}
+.shelf-stat-label{
+    font-size:.65rem;
+    font-weight:800;
+    color:#6F849A;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.shelf-stat-value{
+    margin-top:4px;
+    font-size:1.15rem;
+    font-weight:800;
+    color:#173A5E;
+}
+.shelf-stat-note{
+    margin-top:4px;
+    font-size:.64rem;
+    line-height:1.3;
+    color:#7A8EA4;
+}
+.shelf-method-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    border-radius:999px;
+    padding:6px 9px;
+    background:#EEF4FF;
+    color:#315F96;
+    font-size:.66rem;
+    font-weight:800;
+}
+@media(max-width:900px){
+    .shelf-stat-grid{grid-template-columns:1fr}
+}
 .shelf-visual-shell{
     margin-top:14px;
     border:1px solid #DCE6EF;
@@ -3262,21 +3319,36 @@ elif page == "Qué pasa si falta...":
     st.caption("Los porcentajes describen la reacción declarada ante cada escenario; no representan una proyección de ventas.")
 
 elif page == "Cómo ordenar el anaquel":
-    # ===== Anaquel =====
+    # ===== Anaquel · recomendación estadística =====
+    shelf_reference = reference if is_tendential else df
+
+    if n < 30:
+        shrink_strength = 24.0
+    elif n < 60:
+        shrink_strength = 16.0
+    elif n < 100:
+        shrink_strength = 8.0
+    else:
+        shrink_strength = 0.0
+
+    stat_rank = shelf_statistical_model(
+        filtered,
+        shelf_reference,
+        shrink_strength=shrink_strength,
+        bootstrap=300,
+        seed=20261001,
+    )
+
     if is_tendential:
-        priority = shelf_priority_tendential(filtered, reference).copy()
-        priority["valor"] = priority["indice_tendencial"]
         easy, barriers = friction_tendential(filtered, reference)
         easy_value = float(easy["tendencial"])
+        raw_priority = shelf_priority_tendential(filtered, reference).copy()
+        raw_priority["valor_descriptivo"] = raw_priority["indice_tendencial"]
     else:
-        priority = shelf_priority(filtered).copy()
-        priority["valor"] = priority["indice_prioridad"]
         easy_value, barriers = friction_summary(filtered)
         easy_value = float(easy_value)
-
-    priority = priority.sort_values("valor", ascending=False).reset_index(drop=True)
-    top3 = priority.head(3).copy()
-    opts = priority["organizacion"].tolist()
+        raw_priority = shelf_priority(filtered).copy()
+        raw_priority["valor_descriptivo"] = raw_priority["indice_prioridad"]
 
     st.markdown(
         f"""
@@ -3286,7 +3358,7 @@ elif page == "Cómo ordenar el anaquel":
             <div>
               <div class="shelf-header-kicker">Anaquel</div>
               <div class="shelf-header-title">Cómo facilitar la compra en anaquel</div>
-              <div class="shelf-header-sub">Convierte las prioridades declaradas en una propuesta visual de organización del anaquel.</div>
+              <div class="shelf-header-sub">Convierte A1/A2 en una recomendación estadística de organización y valida dónde persisten fricciones de búsqueda.</div>
             </div>
           </div>
           <div class="shelf-meta">
@@ -3298,49 +3370,96 @@ elif page == "Cómo ordenar el anaquel":
         unsafe_allow_html=True,
     )
 
+    top3 = stat_rank.head(3).copy()
     cards = '<div class="shelf-top-grid">'
     for rank, (_, row) in enumerate(top3.iterrows(), start=1):
         cards += (
             '<div class="shelf-top-card">'
             f'<div class="shelf-rank">{rank}</div>'
             '<div>'
-            f'<div class="shelf-card-kicker">Prioridad #{rank}</div>'
+            f'<div class="shelf-card-kicker">Recomendación #{rank}</div>'
             f'<div class="shelf-card-name">{html.escape(str(row["organizacion"]))}</div>'
-            '<div class="shelf-card-note">Combina primera y segunda ayuda declarada.</div>'
+            f'<div class="shelf-card-note">IC 95%: {float(row["ic_bajo"]):.1f}%–{float(row["ic_alto"]):.1f}% · '
+            f'Estabilidad como #1: {float(row["estabilidad_top1"]):.0f}%</div>'
             '</div>'
-            f'<div class="shelf-card-value">{float(row["valor"]):.1f}</div>'
+            f'<div class="shelf-card-value">{float(row["prob_estimada"]):.1f}%</div>'
             '</div>'
         )
     cards += '</div>'
     st.markdown(cards, unsafe_allow_html=True)
 
-    # --- Propuesta visual dinámica ---
     with st.container(key="shelf_combo_panel", border=True):
-        st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
+        h1, h2 = st.columns([1.15, .85])
+        with h1:
+            st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="shelf-panel-sub">Usa la recomendación estadística o prueba una configuración alternativa.</div>',
+                unsafe_allow_html=True,
+            )
+        with h2:
+            shelf_mode = st.segmented_control(
+                "Modo",
+                options=["Orden recomendado", "Probar organización"],
+                default="Orden recomendado",
+                key="shelf_mode",
+            )
+
+        all_options = stat_rank["organizacion"].tolist()
+        recommended_primary = str(stat_rank.iloc[0]["organizacion"]) if len(stat_rank) else "—"
+
+        if shelf_mode == "Orden recomendado":
+            primary = recommended_primary
+        else:
+            primary = st.selectbox(
+                "Organizar primero por",
+                all_options,
+                index=all_options.index(recommended_primary) if recommended_primary in all_options else 0,
+                key="shelf_primary",
+            )
+
+        conditional_strength = 12.0 if n < 60 else 8.0 if n < 100 else 4.0
+        conditional = shelf_conditional_model(
+            filtered,
+            primary,
+            shelf_reference,
+            strength=conditional_strength,
+        )
+
+        cond_options = conditional["organizacion"].tolist()
+        recommended_secondary = str(conditional.iloc[0]["organizacion"]) if len(conditional) else "—"
+
+        if shelf_mode == "Orden recomendado":
+            secondary = recommended_secondary
+        else:
+            secondary = st.selectbox(
+                "Después apoyar con",
+                cond_options,
+                index=0,
+                key="shelf_secondary",
+            ) if cond_options else "—"
+
+        selected_primary_row = stat_rank[stat_rank["organizacion"] == primary]
+        primary_prob = float(selected_primary_row.iloc[0]["prob_estimada"]) if len(selected_primary_row) else 0.0
+        primary_low = float(selected_primary_row.iloc[0]["ic_bajo"]) if len(selected_primary_row) else 0.0
+        primary_high = float(selected_primary_row.iloc[0]["ic_alto"]) if len(selected_primary_row) else 0.0
+        primary_stability = float(selected_primary_row.iloc[0]["estabilidad_top1"]) if len(selected_primary_row) else 0.0
+
+        selected_secondary_row = conditional[conditional["organizacion"] == secondary]
+        secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
+        secondary_low = float(selected_secondary_row.iloc[0]["ic_bajo"]) if len(selected_secondary_row) else 0.0
+        secondary_high = float(selected_secondary_row.iloc[0]["ic_alto"]) if len(selected_secondary_row) else 0.0
+        secondary_lift = float(selected_secondary_row.iloc[0]["lift"]) if len(selected_secondary_row) else float("nan")
+        branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
+
+        remaining = [x for x in all_options if x not in {primary, secondary}]
+        support_label = remaining[0] if remaining else "Que tenga señalización clara o guías"
+
         st.markdown(
-            '<div class="shelf-panel-sub">Elige la lógica principal y la secundaria; el esquema del anaquel se reorganiza automáticamente.</div>',
+            f'<div class="shelf-mode-note"><span class="shelf-method-badge">Modelo estadístico</span> '
+            f'La primera capa se estima con un modelo de ranking A1→A2; la segunda se estima condicionada a '
+            f'<b>{html.escape(primary)}</b>. En bases pequeñas se estabiliza la lectura hacia el total.</div>',
             unsafe_allow_html=True,
         )
-
-        left, right = st.columns(2)
-        primary = left.selectbox(
-            "Organizar primero por",
-            opts,
-            index=0,
-            key="shelf_primary",
-        )
-        sec_opts = [x for x in opts if x != primary]
-        secondary = right.selectbox(
-            "Después apoyar con",
-            sec_opts,
-            index=0,
-            key="shelf_secondary",
-        )
-
-        if is_tendential:
-            pair = shelf_pair_tendential(filtered, reference, primary, secondary)
-        else:
-            pair = shelf_pair_score(filtered, primary, secondary)
 
         def _shelf_blocks(label: str) -> list[str]:
             txt = str(label).lower()
@@ -3372,9 +3491,6 @@ elif page == "Cómo ordenar el anaquel":
 
         primary_blocks = _shelf_blocks(primary)
         secondary_blocks = _shelf_blocks(secondary)
-
-        support_rows = [x for x in opts if x not in {primary, secondary}][:2]
-        support_label = support_rows[0] if support_rows else "Señalización clara o guías"
         support_blocks = _shelf_blocks(support_label)
 
         def _blocks_html(items: list[str], css_class: str = "") -> str:
@@ -3391,96 +3507,129 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-visual-help">Esquema dinámico basado en A1/A2 y los filtros activos.</div>'
             '</div>'
             '<div class="shelf-unit">'
-            '<div class="shelf-unit-label">'
-            '<div class="shelf-unit-num">1</div>'
-            '<div>'
+            '<div class="shelf-unit-label"><div class="shelf-unit-num">1</div><div>'
             f'<div class="shelf-unit-main">{html.escape(primary)}</div>'
-            '<div class="shelf-unit-sub">Guía principal del anaquel</div>'
-            '</div></div>'
+            '<div class="shelf-unit-sub">Guía principal del anaquel</div></div></div>'
             + _blocks_html(primary_blocks)
             + '</div>'
             '<div class="shelf-unit">'
-            '<div class="shelf-unit-label secondary">'
-            '<div class="shelf-unit-num">2</div>'
-            '<div>'
+            '<div class="shelf-unit-label secondary"><div class="shelf-unit-num">2</div><div>'
             f'<div class="shelf-unit-main">{html.escape(secondary)}</div>'
-            '<div class="shelf-unit-sub">Apoyo para afinar la elección</div>'
-            '</div></div>'
+            '<div class="shelf-unit-sub">Segunda capa condicionada a la primera</div></div></div>'
             + _blocks_html(secondary_blocks, "secondary")
             + '</div>'
             '<div class="shelf-unit">'
-            '<div class="shelf-unit-label support">'
-            '<div class="shelf-unit-num">+</div>'
-            '<div>'
+            '<div class="shelf-unit-label support"><div class="shelf-unit-num">+</div><div>'
             f'<div class="shelf-unit-main">{html.escape(support_label)}</div>'
-            '<div class="shelf-unit-sub">Capa de apoyo y señalización</div>'
-            '</div></div>'
+            '<div class="shelf-unit-sub">Capa de apoyo complementaria</div></div></div>'
             + _blocks_html(support_blocks, "support")
             + '</div>'
-            '<div class="shelf-visual-summary">'
-            '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">Al menos una coincide</div>'
-            f'<div class="shelf-visual-summary-value">{float(pair["coverage"]):.1f}%</div>'
-            f'<div class="shelf-visual-summary-note">{html.escape(primary)} o {html.escape(secondary)} aparece entre sus 2 principales ayudas para encontrar el producto.</div>'
+            '<div class="shelf-stat-grid">'
+            '<div class="shelf-stat-card">'
+            '<div class="shelf-stat-label">Primera recomendación</div>'
+            f'<div class="shelf-stat-value">{primary_prob:.1f}%</div>'
+            f'<div class="shelf-stat-note">Probabilidad estimada de ser la primera ayuda. IC 95%: {primary_low:.1f}%–{primary_high:.1f}%. '
+            f'Estabilidad como #1: {primary_stability:.0f}%.</div>'
             '</div>'
-            '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">Las dos coinciden</div>'
-            f'<div class="shelf-visual-summary-value">{float(pair["top2_any_order"]):.1f}%</div>'
-            f'<div class="shelf-visual-summary-note">Ambas aparecen entre sus 2 principales ayudas, sin importar cuál va primero.</div>'
+            '<div class="shelf-stat-card">'
+            '<div class="shelf-stat-label">Segunda capa condicionada</div>'
+            f'<div class="shelf-stat-value">{secondary_prob:.1f}%</div>'
+            f'<div class="shelf-stat-note">Probabilidad estimada de elegir {html.escape(secondary)} después de {html.escape(primary)}. '
+            f'IC 95%: {secondary_low:.1f}%–{secondary_high:.1f}%. Base de la rama: {branch_n}.</div>'
             '</div>'
-            '<div class="shelf-visual-summary-card">'
-            '<div class="shelf-visual-summary-label">En este orden</div>'
-            f'<div class="shelf-visual-summary-value">{float(pair["exact_order"]):.1f}%</div>'
-            f'<div class="shelf-visual-summary-note">Primero {html.escape(primary)} → después {html.escape(secondary)}.</div>'
+            '<div class="shelf-stat-card">'
+            '<div class="shelf-stat-label">Afinidad de combinación</div>'
+            f'<div class="shelf-stat-value">{secondary_lift:.2f}×</div>'
+            f'<div class="shelf-stat-note">Lift frente a la frecuencia promedio de {html.escape(secondary)} como segunda ayuda. '
+            'Más de 1× indica asociación positiva.</div>'
             '</div>'
             '</div>'
             '</div>'
         )
         st.markdown(visual_html, unsafe_allow_html=True)
 
-        st.markdown(
-            f'<div class="shelf-insight">En esta configuración, <b>{float(pair["coverage"]):.1f}%</b> menciona '
-            f'<b>{html.escape(primary)}</b> o <b>{html.escape(secondary)}</b> entre sus dos principales ayudas. '
-            f'La coincidencia exacta en el orden <b>{html.escape(primary)} → {html.escape(secondary)}</b> es '
-            f'<b>{float(pair["exact_order"]):.1f}%</b>.</div>',
-            unsafe_allow_html=True,
-        )
+        if shelf_mode == "Orden recomendado":
+            st.markdown(
+                f'<div class="shelf-insight">La recomendación actual es <b>{html.escape(primary)}</b> → '
+                f'<b>{html.escape(secondary)}</b>. La primera capa tiene una estabilidad de '
+                f'<b>{primary_stability:.0f}%</b> como #1 en bootstrap; la segunda muestra una afinidad de '
+                f'<b>{secondary_lift:.2f}×</b>.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="shelf-insight">La configuración probada <b>{html.escape(primary)}</b> → '
+                f'<b>{html.escape(secondary)}</b> tiene una probabilidad condicional de segunda capa de '
+                f'<b>{secondary_prob:.1f}%</b> y una afinidad de <b>{secondary_lift:.2f}×</b>.</div>',
+                unsafe_allow_html=True,
+            )
 
     with st.container(key="shelf_rank_panel", border=True):
-        st.markdown('<div class="shelf-panel-title">Ranking de organización</div>', unsafe_allow_html=True)
+        st.markdown('<div class="shelf-panel-title">Ranking estadístico de organización</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="shelf-panel-sub">Mayor índice = mayor prioridad para facilitar la navegación del anaquel.</div>',
+            '<div class="shelf-panel-sub">Probabilidad estimada de que cada criterio sea la primera ayuda para navegar el anaquel.</div>',
             unsafe_allow_html=True,
         )
 
-        shown = priority.copy()
-        shown["etiqueta"] = shown["valor"].map(lambda x: f"{float(x):.1f}")
-        fig = px.bar(
-            shown.sort_values("valor"),
-            x="valor",
-            y="organizacion",
-            orientation="h",
-            text="etiqueta",
-            labels={"valor": "Índice de prioridad", "organizacion": ""},
+        ranked_plot = stat_rank.sort_values("prob_estimada", ascending=True).copy()
+        ranked_plot["err_plus"] = ranked_plot["ic_alto"] - ranked_plot["prob_estimada"]
+        ranked_plot["err_minus"] = ranked_plot["prob_estimada"] - ranked_plot["ic_bajo"]
+
+        fig = go.Figure(
+            go.Bar(
+                x=ranked_plot["prob_estimada"],
+                y=ranked_plot["organizacion"],
+                orientation="h",
+                text=ranked_plot["prob_estimada"].map(lambda x: f"{float(x):.1f}%"),
+                textposition="outside",
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=ranked_plot["err_plus"],
+                    arrayminus=ranked_plot["err_minus"],
+                    thickness=1.2,
+                    width=3,
+                ),
+                hovertemplate=(
+                    "<b>%{y}</b><br>"
+                    "Probabilidad estimada: %{x:.1f}%<br>"
+                    "IC 95%: %{customdata[0]:.1f}%–%{customdata[1]:.1f}%<br>"
+                    "Estabilidad como #1: %{customdata[2]:.0f}%<extra></extra>"
+                ),
+                customdata=ranked_plot[["ic_bajo", "ic_alto", "estabilidad_top1"]].to_numpy(),
+            )
         )
-        fig.update_traces(textposition="outside", cliponaxis=False)
-        max_val = float(shown["valor"].max()) if len(shown) else 0.0
+        max_rank = float(ranked_plot["ic_alto"].max()) if len(ranked_plot) else 0.0
         fig.update_layout(
-            height=max(430, 100 + len(shown) * 44),
-            margin=dict(l=10, r=70, t=18, b=28),
+            height=max(430, 100 + len(ranked_plot) * 46),
+            margin=dict(l=10, r=95, t=18, b=28),
             plot_bgcolor="white",
             paper_bgcolor="white",
-            yaxis=dict(categoryorder="total ascending"),
-            xaxis=dict(range=[0, max_val * 1.18 if max_val > 0 else 1]),
+            xaxis=dict(range=[0, min(100, max_rank * 1.18 if max_rank > 0 else 1)]),
+            yaxis=dict(title=""),
         )
-        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False)
+        fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("El índice combina lo que las personas mencionaron como primera y segunda ayuda para navegar el anaquel.")
+
+        with st.expander("Ver metodología y lectura descriptiva A1/A2"):
+            st.markdown(
+                "La recomendación usa un modelo **Plackett–Luce** sobre el ranking A1→A2. "
+                "Los intervalos y la estabilidad se obtienen con **bootstrap**. "
+                "Cuando la base filtrada es pequeña, se aplica **partial pooling** hacia el total para reducir ruido."
+            )
+            desc = raw_priority[["organizacion", "valor_descriptivo"]].rename(
+                columns={"organizacion": "Organización", "valor_descriptivo": "Índice descriptivo A1/A2"}
+            )
+            st.dataframe(
+                desc.style.format({"Índice descriptivo A1/A2": "{:.1f}"}),
+                use_container_width=True,
+                hide_index=True,
+            )
 
     with st.container(key="shelf_friction_panel", border=True):
         st.markdown('<div class="shelf-panel-title">Fricción real al encontrar el producto</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="shelf-panel-sub">Contrasta la organización deseada con la experiencia real de búsqueda.</div>',
+            '<div class="shelf-panel-sub">Contrasta la organización recomendada con la experiencia real de búsqueda.</div>',
             unsafe_allow_html=True,
         )
 
@@ -3531,7 +3680,10 @@ elif page == "Cómo ordenar el anaquel":
                 unsafe_allow_html=True,
             )
 
-    st.caption("El anaquel visual es un esquema analítico: traduce A1/A2 en una propuesta de organización y E1/E2 en fricciones observadas; no representa un planograma físico final.")
+    st.caption(
+        "La recomendación de anaquel es estadística y asociativa: modela el ranking A1/A2 y estabiliza bases pequeñas. "
+        "E1/E2 se usa como diagnóstico de fricción; no se interpreta como efecto causal de una organización física."
+    )
 
 
 st.markdown(
