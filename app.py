@@ -3041,28 +3041,70 @@ elif page == "Cómo se decide":
     bayes_filters["producto"] = filters.get("producto", []) or []
     base_reference = apply_filters(df, bayes_filters)
     k_decision = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
-    main_path = main_decision_path(
-        filtered,
-        base_reference,
-        force_tendential=is_tendential,
-    )
 
-    main_first = main_path.get("first", "—")
-    main_first_pct = float(main_path.get("first_pct", 0.0))
-    main_second = main_path.get("second", "—")
-    main_second_pct = float(main_path.get("second_pct", 0.0))
-    main_third = main_path.get("third", "—")
-    main_third_pct = float(main_path.get("third_pct", 0.0))
-    main_route_pct = float(main_path.get("route_pct", 0.0))
+    # Modelo formal: Red Bayesiana Secuencial D1 -> D2|D1 -> D3|D1,D2.
+    bayes_fit = bayes_nodes = bayes_routes = None
+    bayes_ready = False
+    try:
+        bayes_fit, bayes_nodes, bayes_routes = cached_sequential_journey(
+            filtered,
+            base_reference,
+            simulations=5000,
+        )
+        bayes_ready = bayes_routes is not None and len(bayes_routes) > 0
+    except Exception:
+        st.warning(
+            "No fue posible estimar la Red Bayesiana Secuencial para este corte. "
+            "Se conserva temporalmente la lectura bayesiana simplificada."
+        )
 
-    # D1 también se presenta como probabilidad bayesiana para que los tres
-    # niveles usen exactamente la misma lógica.
-    step1, _, _ = bayesian_transition_reading(
-        filtered,
-        base_reference,
-        "decision_1",
-        strength=10.0,
-    )
+    if bayes_ready:
+        main_row = bayes_routes.iloc[0]
+        main_first = str(main_row["first"])
+        main_second = str(main_row["second"])
+        main_third = str(main_row["third"])
+        main_route_pct = float(main_row["posterior_mean_pct"])
+
+        step1 = bayes_nodes["d1"][["criterion", "posterior_pct"]].rename(
+            columns={"criterion": "opcion", "posterior_pct": "porcentaje"}
+        ).copy()
+        step1 = step1.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+
+        first_row = step1[step1["opcion"] == main_first]
+        main_first_pct = float(first_row.iloc[0]["porcentaje"]) if len(first_row) else 0.0
+
+        d2_main = bayes_nodes["d2"]
+        d2_main = d2_main[
+            (d2_main["first"] == main_first) & (d2_main["second"] == main_second)
+        ]
+        main_second_pct = float(d2_main.iloc[0]["conditional_pct"]) if len(d2_main) else 0.0
+
+        d3_main = bayes_nodes["d3"]
+        d3_main = d3_main[
+            (d3_main["first"] == main_first) &
+            (d3_main["second"] == main_second) &
+            (d3_main["third"] == main_third)
+        ]
+        main_third_pct = float(d3_main.iloc[0]["conditional_pct"]) if len(d3_main) else 0.0
+    else:
+        main_path = main_decision_path(
+            filtered,
+            base_reference,
+            force_tendential=is_tendential,
+        )
+        main_first = main_path.get("first", "—")
+        main_first_pct = float(main_path.get("first_pct", 0.0))
+        main_second = main_path.get("second", "—")
+        main_second_pct = float(main_path.get("second_pct", 0.0))
+        main_third = main_path.get("third", "—")
+        main_third_pct = float(main_path.get("third_pct", 0.0))
+        main_route_pct = float(main_path.get("route_pct", 0.0))
+        step1, _, _ = bayesian_transition_reading(
+            filtered,
+            base_reference,
+            "decision_1",
+            strength=10.0,
+        )
 
     first_options = step1["opcion"].tolist()
 
@@ -3132,12 +3174,19 @@ elif page == "Cómo se decide":
 
     target1 = filtered[filtered["decision_1"] == selected_first].copy()
     ref1 = base_reference[base_reference["decision_1"] == selected_first].copy()
-    step2, _, _ = bayesian_transition_reading(
-        target1,
-        base_reference,
-        "decision_2",
-        strength=12.0,
-    )
+    if bayes_ready:
+        step2 = bayes_nodes["d2"]
+        step2 = step2[step2["first"] == selected_first][
+            ["second", "conditional_pct", "base"]
+        ].rename(columns={"second": "opcion", "conditional_pct": "porcentaje"})
+        step2 = step2.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+    else:
+        step2, _, _ = bayesian_transition_reading(
+            target1,
+            base_reference,
+            "decision_2",
+            strength=12.0,
+        )
     step2 = step2[step2["opcion"] != selected_first].reset_index(drop=True)
     second_options = step2["opcion"].tolist()
 
@@ -3151,12 +3200,22 @@ elif page == "Cómo se decide":
     target12 = target1[target1["decision_2"] == selected_second].copy() if selected_second != "—" else target1.iloc[0:0].copy()
     ref12 = ref1[ref1["decision_2"] == selected_second].copy() if selected_second != "—" else ref1.iloc[0:0].copy()
     broader = ref1 if len(ref1) else base_reference
-    step3, _, _ = bayesian_transition_reading(
-        target12,
-        base_reference,
-        "decision_3",
-        strength=14.0,
-    )
+    if bayes_ready:
+        step3 = bayes_nodes["d3"]
+        step3 = step3[
+            (step3["first"] == selected_first) &
+            (step3["second"] == selected_second)
+        ][["third", "conditional_pct", "base"]].rename(
+            columns={"third": "opcion", "conditional_pct": "porcentaje"}
+        )
+        step3 = step3.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+    else:
+        step3, _, _ = bayesian_transition_reading(
+            target12,
+            base_reference,
+            "decision_3",
+            strength=14.0,
+        )
     step3 = step3[~step3["opcion"].isin([selected_first, selected_second])].reset_index(drop=True)
     third_options = step3["opcion"].tolist()
 
@@ -3187,12 +3246,22 @@ elif page == "Cómo se decide":
         # Recalcular D3 al cambiar el segundo paso.
         target12 = target1[target1["decision_2"] == selected_second].copy() if selected_second != "—" else target1.iloc[0:0].copy()
         ref12 = ref1[ref1["decision_2"] == selected_second].copy() if selected_second != "—" else ref1.iloc[0:0].copy()
-        step3, _, _ = bayesian_transition_reading(
-            target12,
-            base_reference,
-            "decision_3",
-            strength=14.0,
-        )
+        if bayes_ready:
+            step3 = bayes_nodes["d3"]
+            step3 = step3[
+                (step3["first"] == selected_first) &
+                (step3["second"] == selected_second)
+            ][["third", "conditional_pct", "base"]].rename(
+                columns={"third": "opcion", "conditional_pct": "porcentaje"}
+            )
+            step3 = step3.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+        else:
+            step3, _, _ = bayesian_transition_reading(
+                target12,
+                base_reference,
+                "decision_3",
+                strength=14.0,
+            )
         step3 = step3[~step3["opcion"].isin([selected_first, selected_second])].reset_index(drop=True)
         third_options = step3["opcion"].tolist()
 
@@ -3263,6 +3332,7 @@ elif page == "Cómo se decide":
             highlight_path=highlight_path,
             highlight_name=route_legend,
             detail_mode=detail,
+            bayes_fit=bayes_fit if bayes_ready else None,
         )
         tree_fig.update_layout(
             title=None,
