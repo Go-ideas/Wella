@@ -2070,43 +2070,6 @@ def decision_tree_figure(
             else None
         )
 
-    # Para la lectura ejecutiva, los porcentajes visibles de la ruta azul
-    # se muestran en orden descendente. Se parte de las probabilidades
-    # bayesianas originales y sólo se acota un nivel cuando supera al anterior.
-    highlight_display = {}
-    raw_first = raw_second = raw_third = None
-
-    for d1 in branches:
-        if d1["label"] != highlight_first:
-            continue
-        raw_first = float(d1["cond_pct"])
-        for d2 in d1["children"]:
-            if d2["label"] != highlight_second:
-                continue
-            raw_second = float(d2["cond_pct"])
-            for d3 in d2["children"]:
-                if d3["label"] == highlight_third:
-                    raw_third = float(d3["cond_pct"])
-                    break
-            break
-        break
-
-    if raw_first is not None:
-        display_first = raw_first
-        display_second = (
-            min(raw_second, max(display_first - 0.1, 0.0))
-            if raw_second is not None else None
-        )
-        display_third = (
-            min(raw_third, max((display_second if display_second is not None else display_first) - 0.1, 0.0))
-            if raw_third is not None else None
-        )
-        highlight_display = {
-            "first": display_first,
-            "second": display_second,
-            "third": display_third,
-        }
-
     fig = go.Figure()
 
     x_root, x_d1, x_d2, x_d3 = 0.16, 1.34, 2.78, 4.22
@@ -2146,12 +2109,8 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-        # Mostrar cifras sólo en la ruta protagonista y sin texto adicional.
-        if not highlight:
-            return
-
-        # Ubicar el valor cerca del nodo de destino, separado de la línea y del texto.
-        t_badge = 0.72
+        # Todas las ramas muestran su probabilidad bayesiana acumulada.
+        t_badge = 0.78
         x_badge = (
             ((1-t_badge)**3)*x0
             + 3*((1-t_badge)**2)*t_badge*c1x
@@ -2165,20 +2124,22 @@ def decision_tree_figure(
             + (t_badge**3)*y1
         )
 
-        # El eje Y está invertido; restar desplaza visualmente el badge hacia arriba.
         fig.add_annotation(
             x=x_badge,
-            y=y_badge - 0.13,
+            y=y_badge - (0.13 if highlight else 0.08),
             text=f"<b>{pct:.1f}%</b>",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
             bgcolor="#FFFFFF",
-            bordercolor="#7FB5E6",
+            bordercolor="#7FB5E6" if highlight else "#D9E2EA",
             borderwidth=1,
-            borderpad=3,
-            font=dict(size=11.3, color="#1D6FB5"),
-            opacity=0.98,
+            borderpad=3 if highlight else 2,
+            font=dict(
+                size=11.3 if highlight else 9.6,
+                color="#1D6FB5" if highlight else "#7A8DA1",
+            ),
+            opacity=0.98 if highlight else 0.92,
         )
 
 
@@ -2257,8 +2218,7 @@ def decision_tree_figure(
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
-        edge_pct = highlight_display.get("first", d1["pct"]) if h1 else d1["pct"]
-        add_edge(x_root + 0.11, root_y, x_d1 - 0.24, d1["y"], edge_pct, highlight=h1)
+        add_edge(x_root + 0.11, root_y, x_d1 - 0.24, d1["y"], d1["pct"], highlight=h1)
         add_card(
             x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
@@ -2266,8 +2226,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            edge_pct = highlight_display.get("second", d2["cond_pct"]) if h2 else d2["cond_pct"]
-            add_edge(x_d1 + 0.24, d1["y"], x_d2 - 0.24, d2["y"], edge_pct, highlight=h2)
+            add_edge(x_d1 + 0.24, d1["y"], x_d2 - 0.24, d2["y"], d2["pct"], highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
@@ -2275,8 +2234,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                edge_pct = highlight_display.get("third", d3["cond_pct"]) if h3 else d3["cond_pct"]
-                add_edge(x_d2 + 0.24, d2["y"], x_d3 - 0.24, d3["y"], edge_pct, highlight=h3)
+                add_edge(x_d2 + 0.24, d2["y"], x_d3 - 0.24, d3["y"], d3["pct"], highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
@@ -3212,11 +3170,11 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                "Los porcentajes se muestran sólo en la ruta azul y se presentan de mayor a menor para facilitar la lectura de la jerarquía."
+                "Cada rama muestra su probabilidad bayesiana acumulada sobre el total. Por eso, dentro de una misma ruta, los porcentajes disminuyen conforme avanza el árbol."
             )
         else:
             st.caption(
-                "Los porcentajes se muestran sólo en la ruta azul seleccionada y se presentan de mayor a menor para facilitar la lectura."
+                "Cada rama muestra su probabilidad bayesiana acumulada sobre el total. La línea azul corresponde a la ruta seleccionada."
             )
 
         if selected_second != "—" and selected_third != "—":
@@ -3243,16 +3201,16 @@ elif page == "Cómo se decide":
 
         with st.expander("Cómo se calculan estos porcentajes"):
             st.markdown(
-                "Primero se estima una **probabilidad bayesiana de transición** en cada paso, combinando las respuestas "
-                "observadas con una referencia de la categoría para estabilizar ramas pequeñas."
+                "En cada paso se estima una **probabilidad bayesiana de transición**, combinando lo observado en esa rama "
+                "con una referencia de la categoría para estabilizar bases pequeñas."
             )
             st.markdown(
-                "Para la visualización ejecutiva, si un nivel posterior resulta mayor que el anterior, se **acota al nivel previo** "
-                "para mantener una lectura descendente de la jerarquía. Los valores bayesianos originales se conservan en "
-                "**Ver porcentajes de esta ruta**."
+                "El porcentaje que ves en cada rama es la **probabilidad acumulada de llegar a ese punto desde el total**: "
+                "P(D1), luego P(D1)×P(D2|D1), y finalmente P(D1)×P(D2|D1)×P(D3|D1,D2). "
+                "Por construcción, los porcentajes de una misma ruta siempre van de mayor a menor."
             )
 
-        with st.expander("Ver porcentajes bayesianos originales"):
+        with st.expander("Ver probabilidades de transición de esta ruta"):
             st.markdown(
                 f"**Primero:** {selected_first_pct:.1f}% del total comienza por **{selected_first}**."
             )
