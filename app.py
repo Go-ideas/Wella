@@ -1040,8 +1040,8 @@ section[data-testid="stSidebar"] > div,
 }
 .shelf-route-grid{
     display:grid;
-    grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr);
-    gap:14px;
+    grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr) 44px minmax(0,1fr);
+    gap:12px;
     align-items:stretch;
     margin-top:14px;
 }
@@ -1056,6 +1056,10 @@ section[data-testid="stSidebar"] > div,
     background:linear-gradient(180deg,#FFFFFF 0%,#FBF9FF 100%);
     border-color:#E2DDF8;
 }
+.shelf-route-card.tertiary{
+    background:linear-gradient(180deg,#FFFFFF 0%,#F8FAFC 100%);
+    border-color:#E1E8EF;
+}
 .shelf-route-card-head{
     display:flex;
     align-items:flex-start;
@@ -1069,6 +1073,7 @@ section[data-testid="stSidebar"] > div,
     font-size:.86rem;font-weight:800;
 }
 .shelf-route-card.secondary .shelf-route-step{background:#6A5ACD}
+.shelf-route-card.tertiary .shelf-route-step{background:#8295A8}
 .shelf-route-kicker{
     font-size:.68rem;font-weight:800;letter-spacing:.06em;
     text-transform:uppercase;color:#7890A7;margin-bottom:4px;
@@ -1094,13 +1099,16 @@ section[data-testid="stSidebar"] > div,
 .shelf-route-card.secondary .shelf-route-chip{
     background:#F5F2FF;border-color:#E2DCF8;
 }
+.shelf-route-card.tertiary .shelf-route-chip{
+    background:#F4F7F9;border-color:#E1E8EF;
+}
 .shelf-route-arrow{
     display:flex;align-items:center;justify-content:center;
     color:#8AA6BF;font-size:2.2rem;font-weight:300;
 }
 .shelf-route-bottom{
     display:grid;
-    grid-template-columns:.9fr 1.1fr;
+    grid-template-columns:.85fr .85fr 1.3fr;
     gap:14px;
     margin-top:14px;
 }
@@ -3592,9 +3600,9 @@ elif page == "Cómo ordenar el anaquel":
     with st.container(key="shelf_combo_panel", border=True):
         h1, h2 = st.columns([1.15, .85])
         with h1:
-            st.markdown('<div class="shelf-panel-title">Ruta principal de navegación</div>', unsafe_allow_html=True)
+            st.markdown('<div class="shelf-panel-title">Jerarquía de navegación en 3 niveles</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Lee la ruta de izquierda a derecha: primero cómo se ubica el producto y después qué se usa para afinar la búsqueda.</div>',
+                '<div class="shelf-panel-sub">Lee de izquierda a derecha: primero cómo se ubica el producto, después cómo se afina y finalmente qué funciona como apoyo complementario.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3639,11 +3647,32 @@ elif page == "Cómo ordenar el anaquel":
                 key="shelf_secondary",
             ) if cond_options else "—"
 
+        remaining_rank = executive_rank[
+            ~executive_rank["organizacion"].isin([primary, secondary])
+        ].copy()
+        recommended_tertiary = (
+            str(remaining_rank.iloc[0]["organizacion"]) if len(remaining_rank) else "—"
+        )
+
+        if shelf_mode == "Orden recomendado":
+            tertiary = recommended_tertiary
+        else:
+            tertiary_options = remaining_rank["organizacion"].tolist()
+            tertiary = st.selectbox(
+                "Como tercer apoyo",
+                tertiary_options,
+                index=0,
+                key="shelf_tertiary",
+            ) if tertiary_options else "—"
+
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
         secondary_low = float(selected_secondary_row.iloc[0]["ic_bajo"]) if len(selected_secondary_row) else 0.0
         secondary_high = float(selected_secondary_row.iloc[0]["ic_alto"]) if len(selected_secondary_row) else 0.0
         branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
+
+        selected_tertiary_row = executive_rank[executive_rank["organizacion"] == tertiary]
+        tertiary_pref = float(selected_tertiary_row.iloc[0]["prob_estimada"]) if len(selected_tertiary_row) else 0.0
 
         def _shelf_blocks(label: str) -> list[str]:
             txt = str(label).lower()
@@ -3682,6 +3711,7 @@ elif page == "Cómo ordenar el anaquel":
 
         primary_blocks = _shelf_blocks(primary)
         secondary_blocks = _shelf_blocks(secondary)
+        tertiary_blocks = _shelf_blocks(tertiary)
         primary_chips = "".join(
             f'<span class="shelf-route-chip">{html.escape(str(item))}</span>'
             for item in primary_blocks[:4]
@@ -3689,6 +3719,10 @@ elif page == "Cómo ordenar el anaquel":
         secondary_chips = "".join(
             f'<span class="shelf-route-chip">{html.escape(str(item))}</span>'
             for item in secondary_blocks[:4]
+        )
+        tertiary_chips = "".join(
+            f'<span class="shelf-route-chip">{html.escape(str(item))}</span>'
+            for item in tertiary_blocks[:4]
         )
 
         visual_html = (
@@ -3699,10 +3733,10 @@ elif page == "Cómo ordenar el anaquel":
                   '<div>'
                     '<div class="shelf-route-kicker">Primero</div>'
                     f'<div class="shelf-route-name">{html.escape(primary)}</div>'
-                    '<div class="shelf-route-explain">Es la primera guía que ayuda a ubicar el producto en el anaquel.</div>'
+                    '<div class="shelf-route-explain">Guía principal para ubicar el producto en el anaquel.</div>'
                   '</div>'
                 '</div>'
-                '<div class="shelf-route-examples-label">Ejemplos de cómo se vería</div>'
+                '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
               '<div class="shelf-route-arrow">→</div>'
@@ -3712,25 +3746,44 @@ elif page == "Cómo ordenar el anaquel":
                   '<div>'
                     '<div class="shelf-route-kicker">Después</div>'
                     f'<div class="shelf-route-name">{html.escape(secondary)}</div>'
-                    '<div class="shelf-route-explain">Es la segunda guía que se usa para afinar la elección.</div>'
+                    '<div class="shelf-route-explain">Segunda guía para afinar la elección.</div>'
                   '</div>'
                 '</div>'
-                '<div class="shelf-route-examples-label">Ejemplos de cómo se vería</div>'
+                '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{secondary_chips}</div>'
+              '</div>'
+              '<div class="shelf-route-arrow">→</div>'
+              '<div class="shelf-route-card tertiary">'
+                '<div class="shelf-route-card-head">'
+                  '<div class="shelf-route-step">3</div>'
+                  '<div>'
+                    '<div class="shelf-route-kicker">Complementa</div>'
+                    f'<div class="shelf-route-name">{html.escape(tertiary)}</div>'
+                    '<div class="shelf-route-explain">Tercer nivel recomendado entre las alternativas restantes.</div>'
+                  '</div>'
+                '</div>'
+                '<div class="shelf-route-examples-label">Ejemplos</div>'
+                f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
             '</div>'
             '<div class="shelf-route-bottom">'
               '<div class="shelf-route-evidence">'
-                '<div class="shelf-route-label">Qué tan frecuente es esta ruta</div>'
+                '<div class="shelf-route-label">Ruta observada 1 → 2</div>'
                 f'<div class="shelf-route-big">{secondary_prob:.1f}%</div>'
-                f'<div class="shelf-route-copy">Entre quienes eligieron <b>{html.escape(primary)}</b> como primera guía, '
+                f'<div class="shelf-route-copy">Entre quienes eligieron <b>{html.escape(primary)}</b> primero, '
                 f'{secondary_prob:.1f}% eligió después <b>{html.escape(secondary)}</b>.</div>'
-                f'<div class="shelf-route-note">Base de esta ruta: {branch_n}. Este porcentaje se calcula dentro de esa base, no sobre el total de entrevistados.</div>'
+                f'<div class="shelf-route-note">Base de esta ruta: {branch_n}.</div>'
+              '</div>'
+              '<div class="shelf-route-evidence" style="background:#F7F9FB;border-color:#E1E8EF">'
+                '<div class="shelf-route-label">Nivel 3 complementario</div>'
+                f'<div class="shelf-route-big">{tertiary_pref:.1f}%</div>'
+                f'<div class="shelf-route-copy"><b>{html.escape(tertiary)}</b> es la alternativa restante con mayor preferencia modelada.</div>'
+                '<div class="shelf-route-note">Este tercer nivel es una recomendación modelada; el cuestionario mide directamente primera y segunda ayuda.</div>'
               '</div>'
               '<div class="shelf-route-meaning">'
                 '<div class="shelf-route-label">Qué significa para el anaquel</div>'
-                f'<div class="shelf-route-meaning-main">Organizar primero por {html.escape(primary)} y usar {html.escape(secondary)} como segundo nivel de navegación.</div>'
-                '<div class="shelf-route-copy">La primera capa ayuda a encontrar rápidamente el territorio correcto; la segunda permite afinar la elección dentro de ese territorio.</div>'
+                f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
+                '<div class="shelf-route-copy">La propuesta combina una primera guía clara, un segundo filtro para afinar y un tercer apoyo complementario para facilitar la elección.</div>'
               '</div>'
             '</div>'
         )
@@ -3738,9 +3791,9 @@ elif page == "Cómo ordenar el anaquel":
 
         if shelf_mode == "Probar organización":
             st.markdown(
-                f'<div class="shelf-insight"><b>Ruta probada:</b> '
-                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b>. '
-                f'Entre quienes eligen la primera guía, <b>{secondary_prob:.1f}%</b> elige después la segunda.</div>',
+                f'<div class="shelf-insight"><b>Jerarquía probada:</b> '
+                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> → <b>{html.escape(tertiary)}</b>. '
+                f'La relación observada entre nivel 1 y 2 es <b>{secondary_prob:.1f}%</b>; el nivel 3 funciona como apoyo complementario modelado.</div>',
                 unsafe_allow_html=True,
             )
 
