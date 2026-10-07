@@ -3565,7 +3565,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Orden recomendado</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Tres niveles descendentes: cada nivel debe tener menor preferencia que el anterior. Los porcentajes provienen del mismo modelo Plackett–Luce.</div>',
+                '<div class="shelf-panel-sub"><b>Distribución del peso entre los 3 niveles recomendados.</b> Los tres porcentajes suman 100% y muestran la importancia relativa dentro de esta jerarquía.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3624,17 +3624,15 @@ elif page == "Cómo ordenar el anaquel":
         tertiary = str(lower_after_secondary.iloc[0]["organizacion"]) if len(lower_after_secondary) else "—"
         tertiary_pref = float(lower_after_secondary.iloc[0]["prob_estimada"]) if len(lower_after_secondary) else 0.0
 
-        # La lectura condicional A1→A2 se conserva como dato adicional de la ruta.
-        conditional_strength = 12.0 if n < 60 else 8.0 if n < 100 else 4.0
-        conditional = shelf_conditional_model(
-            filtered,
-            primary,
-            shelf_reference,
-            strength=conditional_strength,
-        )
-        selected_secondary_row = conditional[conditional["organizacion"] == secondary]
-        secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
-        branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
+        # Visual executive metric: normalize only the three selected PL weights so
+        # the hierarchy reads as a 100% distribution across levels 1, 2 and 3.
+        hierarchy_total = primary_pref + secondary_pref + tertiary_pref
+        if hierarchy_total > 0:
+            level1_share = primary_pref / hierarchy_total * 100.0
+            level2_share = secondary_pref / hierarchy_total * 100.0
+            level3_share = tertiary_pref / hierarchy_total * 100.0
+        else:
+            level1_share = level2_share = level3_share = 0.0
 
         def _shelf_blocks(label: str) -> list[str]:
             txt = str(label).lower()
@@ -3691,7 +3689,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Ayuda a ubicar primero el producto.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{primary_pref:.1f}% </div>'
+                f'<div class="shelf-route-metric">{level1_share:.1f}% </div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
@@ -3705,7 +3703,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Afina la elección dentro del primer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{secondary_pref:.1f}% </div>'
+                f'<div class="shelf-route-metric">{level2_share:.1f}% </div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{secondary_chips}</div>'
               '</div>'
@@ -3719,7 +3717,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Refuerza la navegación como tercer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% </div>'
+                f'<div class="shelf-route-metric">{level3_share:.1f}% </div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
@@ -3727,8 +3725,8 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-route-meaning" style="margin-top:14px">'
               '<div class="shelf-route-label">Lectura para el anaquel</div>'
               f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
-              '<div class="shelf-route-copy">Los tres porcentajes de arriba son comparables entre sí porque provienen del mismo modelo Plackett–Luce.</div>'
-              f'<div class="shelf-route-note"><b>Dato adicional de la ruta:</b> entre quienes eligieron {html.escape(primary)} primero, {secondary_prob:.1f}% eligió después {html.escape(secondary)} (base {branch_n}).</div>'
+              '<div class="shelf-route-copy">Los porcentajes muestran cómo se reparte el peso total de la jerarquía entre los tres niveles seleccionados.</div>'
+              '<div class="shelf-route-note">Se obtienen normalizando los pesos Plackett–Luce de estos tres niveles para que juntos sumen 100%. No son porcentajes directos de entrevistados.</div>'
             '</div>'
         )
         st.markdown(visual_html, unsafe_allow_html=True)
@@ -3800,6 +3798,11 @@ elif page == "Cómo ordenar el anaquel":
                 "el Nivel 2 con la alternativa de mayor peso que quede por debajo del Nivel 1 y el Nivel 3 con la "
                 "siguiente alternativa de mayor peso que quede por debajo del Nivel 2. Así nunca puede aparecer un "
                 "nivel posterior con mayor peso que el anterior."
+            )
+            st.markdown(
+                "**Para la visualización de los 3 niveles**, los pesos Plackett–Luce de esas tres alternativas se "
+                "normalizan entre sí para sumar 100%. Esto permite leer la jerarquía como una distribución de peso "
+                "interna. El gráfico de ranking que aparece arriba conserva los pesos Plackett–Luce originales."
             )
             st.markdown(
                 f"Finalmente, el ranking se vuelve a calcular **{SHELF_BOOTSTRAP_REPS} veces** mediante bootstrap "
