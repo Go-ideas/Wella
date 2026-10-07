@@ -3663,9 +3663,9 @@ elif page == "Cómo ordenar el anaquel":
             )
 
     with st.container(key="shelf_rank_panel", border=True):
-        st.markdown('<div class="shelf-panel-title">Preferencia modelada de organización</div>', unsafe_allow_html=True)
+        st.markdown('<div class="shelf-panel-title">Ranking para definir los 3 niveles</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="shelf-panel-sub"><b>Modelo Plackett–Luce:</b> combina la primera ayuda (A1) y la segunda ayuda (A2) para estimar el peso relativo de cada forma de organizar el anaquel.</div>',
+            '<div class="shelf-panel-sub"><b>Plackett–Luce</b> integra A1 (primera ayuda) y A2 (segunda ayuda) para ordenar todas las alternativas. La jerarquía siempre se construye de mayor a menor: Nivel 1 &gt; Nivel 2 &gt; Nivel 3.</div>',
             unsafe_allow_html=True,
         )
 
@@ -3686,7 +3686,7 @@ elif page == "Cómo ordenar el anaquel":
                 marker=dict(color=bar_colors),
                 hovertemplate=(
                     "<b>%{y}</b><br>"
-                    "Preferencia Plackett–Luce: %{x:.1f}%<extra></extra>"
+                    "Peso Plackett–Luce: %{x:.1f}%<extra></extra>"
                 ),
             )
         )
@@ -3703,23 +3703,28 @@ elif page == "Cómo ordenar el anaquel":
             showgrid=True,
             gridcolor="#E8EDF3",
             zeroline=False,
-            title="Preferencia modelada (Plackett–Luce)",
+            title="Peso relativo del modelo Plackett–Luce",
             ticksuffix="%",
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        with st.expander("Cómo se calcula"):
+        with st.expander("Cómo se construyen los 3 niveles"):
             st.markdown(
-                "**Plackett–Luce** aprovecha el orden de respuesta de cada persona: "
-                "**A1 = primera ayuda** y **A2 = segunda ayuda**. Con esas posiciones estima una "
-                "**preferencia modelada** para cada forma de organizar el anaquel. "
-                "Por eso, por ejemplo, 31.9% es una estimación del modelo y no el porcentaje directo de personas que la mencionó."
+                "**1. Se parte de A1 y A2.** Cada persona indica qué le ayudaría primero a encontrar el producto "
+                "y qué le ayudaría después. **2. Plackett–Luce** usa ese orden para calcular un peso comparable "
+                "para cada alternativa. **3. El orden recomendado** toma las tres alternativas con mayor peso y "
+                "las coloca en forma descendente: **Nivel 1 > Nivel 2 > Nivel 3**."
             )
             st.markdown(
-                f"Después se repite el cálculo **{SHELF_BOOTSTRAP_REPS} veces** mediante bootstrap. "
-                "Esto sirve para revisar si el orden cambia al volver a muestrear la misma base. "
-                f"Si una alternativa lidera en {SHELF_BOOTSTRAP_REPS}/{SHELF_BOOTSTRAP_REPS} remuestras, significa que su **primer lugar es muy estable**; "
-                "**no significa que 100% de los entrevistados la haya elegido**."
+                "En **Probar organización**, tú eliges únicamente el Nivel 1. El sistema completa automáticamente "
+                "el Nivel 2 con la alternativa de mayor peso que quede por debajo del Nivel 1 y el Nivel 3 con la "
+                "siguiente alternativa de mayor peso que quede por debajo del Nivel 2. Así nunca puede aparecer un "
+                "nivel posterior con mayor peso que el anterior."
+            )
+            st.markdown(
+                f"Finalmente, el ranking se vuelve a calcular **{SHELF_BOOTSTRAP_REPS} veces** mediante bootstrap "
+                "para revisar su estabilidad. Por ejemplo, **300/300** significa que una alternativa quedó en primer "
+                "lugar en todas las remuestras; **no significa que 100% de los entrevistados la haya elegido**."
             )
 
             tech = stat_rank[[
@@ -3740,11 +3745,11 @@ elif page == "Cómo ordenar el anaquel":
             )
             tech = tech.rename(columns={
                 "organizacion": "Organización",
-                "prob_estimada": "Preferencia PL",
+                "prob_estimada": "Peso PL",
                 "posicion_media": "Ranking medio",
             })[[
                 "Organización",
-                "Preferencia PL",
+                "Peso PL",
                 "IC 95%",
                 "Ranking medio",
                 "Lideró en remuestras",
@@ -3752,14 +3757,14 @@ elif page == "Cómo ordenar el anaquel":
 
             st.dataframe(
                 tech.style.format({
-                    "Preferencia PL": "{:.1f}%",
+                    "Peso PL": "{:.1f}%",
                     "Ranking medio": "{:.2f}",
                 }),
                 use_container_width=True,
                 hide_index=True,
             )
             st.caption(
-                "Lectura rápida: menor ranking medio = mejor posición. "
+                "Lectura rápida: mayor peso PL = mayor prioridad para ocupar los primeros niveles. Menor ranking medio = mejor posición. "
                 "“Lideró en remuestras” mide estabilidad del primer lugar, no porcentaje de personas."
             )
 
