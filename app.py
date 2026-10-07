@@ -1682,7 +1682,13 @@ def main_decision_path(
     *,
     force_tendential: bool = False,
 ) -> dict:
-    """Ruta principal D1 → D2 → D3 usando la misma lectura condicional del árbol."""
+    """Ruta D1 → D2 → D3 con mayor alcance acumulado sobre el total.
+
+    Evalúa las combinaciones completas y selecciona la que maximiza:
+    P(D1) × P(D2|D1) × P(D3|D1,D2).
+    Así la ruta principal representa el camino completo más frecuente, no una
+    secuencia construida sólo tomando el máximo local en cada paso.
+    """
     step1, mode1, base1 = conditional_reading(
         data,
         reference_data,
@@ -1694,59 +1700,104 @@ def main_decision_path(
     if step1.empty:
         return {}
 
-    first = str(step1.iloc[0]["opcion"])
-    first_pct = float(step1.iloc[0]["porcentaje"])
+    complete_candidates = []
+    two_step_candidates = []
 
-    target1 = data[data["decision_1"] == first].copy()
-    ref1 = reference_data[reference_data["decision_1"] == first].copy()
-    step2, mode2, base2 = conditional_reading(
-        target1,
-        ref1,
-        reference_data,
-        "decision_2",
-        force_tendential=force_tendential,
-        strength=14.0,
-    )
-    step2 = step2[step2["opcion"] != first].reset_index(drop=True)
-    if step2.empty:
-        return {
-            "first": first, "first_pct": first_pct, "first_base": base1, "first_mode": mode1,
-            "second": "—", "second_pct": 0.0, "second_base": 0, "second_mode": "",
-            "third": "—", "third_pct": 0.0, "third_base": 0, "third_mode": "",
-        }
+    for _, r1 in step1.iterrows():
+        first = str(r1["opcion"])
+        first_pct = float(r1["porcentaje"])
 
-    second = str(step2.iloc[0]["opcion"])
-    second_pct = float(step2.iloc[0]["porcentaje"])
+        target1 = data[data["decision_1"] == first].copy()
+        ref1 = reference_data[reference_data["decision_1"] == first].copy()
 
-    target12 = target1[target1["decision_2"] == second].copy()
-    ref12 = ref1[ref1["decision_2"] == second].copy()
-    broader_d3_ref = ref1 if len(ref1) else reference_data
-    step3, mode3, base3 = conditional_reading(
-        target12,
-        ref12,
-        broader_d3_ref,
-        "decision_3",
-        force_tendential=force_tendential,
-        strength=12.0,
-    )
-    step3 = step3[~step3["opcion"].isin([first, second])].reset_index(drop=True)
+        step2, mode2, base2 = conditional_reading(
+            target1,
+            ref1,
+            reference_data,
+            "decision_2",
+            force_tendential=force_tendential,
+            strength=14.0,
+        )
+        step2 = step2[step2["opcion"] != first].reset_index(drop=True)
 
-    third = str(step3.iloc[0]["opcion"]) if len(step3) else "—"
-    third_pct = float(step3.iloc[0]["porcentaje"]) if len(step3) else 0.0
+        for _, r2 in step2.iterrows():
+            second = str(r2["opcion"])
+            second_pct = float(r2["porcentaje"])
+            two_step_pct = first_pct * second_pct / 100.0
 
+            two_step_candidates.append({
+                "first": first,
+                "first_pct": first_pct,
+                "first_base": base1,
+                "first_mode": mode1,
+                "second": second,
+                "second_pct": second_pct,
+                "second_base": base2,
+                "second_mode": mode2,
+                "third": "—",
+                "third_pct": 0.0,
+                "third_base": 0,
+                "third_mode": "",
+                "route_pct": two_step_pct,
+            })
+
+            target12 = target1[target1["decision_2"] == second].copy()
+            ref12 = ref1[ref1["decision_2"] == second].copy()
+            broader_d3_ref = ref1 if len(ref1) else reference_data
+
+            step3, mode3, base3 = conditional_reading(
+                target12,
+                ref12,
+                broader_d3_ref,
+                "decision_3",
+                force_tendential=force_tendential,
+                strength=12.0,
+            )
+            step3 = step3[~step3["opcion"].isin([first, second])].reset_index(drop=True)
+
+            for _, r3 in step3.iterrows():
+                third = str(r3["opcion"])
+                third_pct = float(r3["porcentaje"])
+                route_pct = two_step_pct * third_pct / 100.0
+
+                complete_candidates.append({
+                    "first": first,
+                    "first_pct": first_pct,
+                    "first_base": base1,
+                    "first_mode": mode1,
+                    "second": second,
+                    "second_pct": second_pct,
+                    "second_base": base2,
+                    "second_mode": mode2,
+                    "third": third,
+                    "third_pct": third_pct,
+                    "third_base": base3,
+                    "third_mode": mode3,
+                    "route_pct": route_pct,
+                })
+
+    if complete_candidates:
+        return max(complete_candidates, key=lambda x: float(x["route_pct"]))
+
+    if two_step_candidates:
+        return max(two_step_candidates, key=lambda x: float(x["route_pct"]))
+
+    # Si no hay D2 válido, conservar al menos el D1 de mayor alcance.
+    first_row = step1.iloc[0]
     return {
-        "first": first,
-        "first_pct": first_pct,
+        "first": str(first_row["opcion"]),
+        "first_pct": float(first_row["porcentaje"]),
         "first_base": base1,
         "first_mode": mode1,
-        "second": second,
-        "second_pct": second_pct,
-        "second_base": base2,
-        "second_mode": mode2,
-        "third": third,
-        "third_pct": third_pct,
-        "third_base": base3,
-        "third_mode": mode3,
+        "second": "—",
+        "second_pct": 0.0,
+        "second_base": 0,
+        "second_mode": "",
+        "third": "—",
+        "third_pct": 0.0,
+        "third_base": 0,
+        "third_mode": "",
+        "route_pct": float(first_row["porcentaje"]),
     }
 
 
@@ -2841,6 +2892,7 @@ elif page == "Cómo se decide":
     main_second_pct = float(main_path.get("second_pct", 0.0))
     main_third = main_path.get("third", "—")
     main_third_pct = float(main_path.get("third_pct", 0.0))
+    main_route_pct = float(main_path.get("route_pct", 0.0))
 
     # Distribución D1 disponible siempre: alimenta "Comenzar desde" y la exploración.
     if is_tendential:
@@ -3048,7 +3100,7 @@ elif page == "Cómo se decide":
         )
 
         route_legend = (
-            "Ruta principal · mayor alcance"
+            "Ruta principal · mayor alcance total"
             if explore_mode == "Vista general" and start_from == "Todos"
             else "Ruta seleccionada"
         )
@@ -3072,10 +3124,16 @@ elif page == "Cómo se decide":
         )
         st.plotly_chart(tree_fig, use_container_width=True)
 
-        st.caption(
-            "Los porcentajes dentro de las tarjetas muestran el alcance acumulado sobre el total de entrevistados. "
-            "Al pasar el cursor puedes ver también el porcentaje condicional dentro de cada rama."
-        )
+        if route_legend.startswith("Ruta principal"):
+            st.caption(
+                f"La ruta azul es el camino completo con mayor alcance acumulado ({main_route_pct:.1f}% del total). "
+                "Los porcentajes de las tarjetas también muestran alcance sobre el total; al pasar el cursor puedes ver el porcentaje condicional de cada rama."
+            )
+        else:
+            st.caption(
+                "Los porcentajes de las tarjetas muestran alcance acumulado sobre el total. "
+                "La ruta azul corresponde a la selección actual; al pasar el cursor puedes ver el porcentaje condicional dentro de cada rama."
+            )
 
         if start_from != "Todos":
             start_phrase = f"Comenzando desde <b>{html.escape(selected_first)}</b> ({selected_first_pct:.1f}% del total), "
