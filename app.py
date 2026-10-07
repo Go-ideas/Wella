@@ -3718,7 +3718,7 @@ elif page == "Cómo ordenar el anaquel":
             st.markdown(
                 f"Después se repite el cálculo **{SHELF_BOOTSTRAP_REPS} veces** mediante bootstrap. "
                 "Esto sirve para revisar si el orden cambia al volver a muestrear la misma base. "
-                "Si una alternativa lidera en 300/300 remuestras, significa que su **primer lugar es muy estable**; "
+                f"Si una alternativa lidera en {SHELF_BOOTSTRAP_REPS}/{SHELF_BOOTSTRAP_REPS} remuestras, significa que su **primer lugar es muy estable**; "
                 "**no significa que 100% de los entrevistados la haya elegido**."
             )
 
