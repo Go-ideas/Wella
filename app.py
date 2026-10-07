@@ -1038,6 +1038,103 @@ section[data-testid="stSidebar"] > div,
     background:linear-gradient(180deg,#FAFCFE,#F0F4F7);
     border-color:#E0E8EF;
 }
+.shelf-route-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr);
+    gap:14px;
+    align-items:stretch;
+    margin-top:14px;
+}
+.shelf-route-card{
+    border:1px solid #DCE6EF;
+    border-radius:18px;
+    padding:18px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#F9FCFF 100%);
+    min-height:210px;
+}
+.shelf-route-card.secondary{
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBF9FF 100%);
+    border-color:#E2DDF8;
+}
+.shelf-route-card-head{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:16px;
+}
+.shelf-route-step{
+    width:38px;height:38px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex:0 0 auto;background:#1D76BE;color:#FFF;
+    font-size:.86rem;font-weight:800;
+}
+.shelf-route-card.secondary .shelf-route-step{background:#6A5ACD}
+.shelf-route-kicker{
+    font-size:.68rem;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:#7890A7;margin-bottom:4px;
+}
+.shelf-route-name{
+    font-size:1.06rem;font-weight:800;line-height:1.22;color:#173A5E;
+}
+.shelf-route-explain{
+    margin-top:5px;font-size:.78rem;line-height:1.38;color:#6F849A;
+}
+.shelf-route-examples-label{
+    font-size:.65rem;font-weight:800;text-transform:uppercase;
+    letter-spacing:.05em;color:#8A9CAF;margin-bottom:8px;
+}
+.shelf-route-chips{
+    display:flex;gap:8px;flex-wrap:wrap;
+}
+.shelf-route-chip{
+    padding:8px 10px;border-radius:10px;
+    background:#EEF6FC;border:1px solid #D8E8F4;
+    color:#31506D;font-size:.72rem;font-weight:700;
+}
+.shelf-route-card.secondary .shelf-route-chip{
+    background:#F5F2FF;border-color:#E2DCF8;
+}
+.shelf-route-arrow{
+    display:flex;align-items:center;justify-content:center;
+    color:#8AA6BF;font-size:2.2rem;font-weight:300;
+}
+.shelf-route-bottom{
+    display:grid;
+    grid-template-columns:.9fr 1.1fr;
+    gap:14px;
+    margin-top:14px;
+}
+.shelf-route-evidence,.shelf-route-meaning{
+    border-radius:17px;padding:16px 18px;
+    border:1px solid #DCE6EF;background:#FFF;
+}
+.shelf-route-evidence{
+    background:#F8F6FF;border-color:#E2DDF8;
+}
+.shelf-route-meaning{
+    background:#F5FAF7;border-color:#D7E8DE;
+}
+.shelf-route-label{
+    font-size:.66rem;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:#73889D;
+}
+.shelf-route-big{
+    margin-top:4px;font-size:2rem;line-height:1;font-weight:800;color:#173A5E;
+}
+.shelf-route-copy{
+    margin-top:8px;font-size:.79rem;line-height:1.42;color:#61788E;
+}
+.shelf-route-meaning-main{
+    margin-top:6px;font-size:1.05rem;line-height:1.35;font-weight:800;color:#173A5E;
+}
+.shelf-route-note{
+    margin-top:9px;font-size:.68rem;line-height:1.35;color:#7B8FA4;
+}
+@media(max-width:900px){
+    .shelf-route-grid{grid-template-columns:1fr}
+    .shelf-route-arrow{transform:rotate(90deg);min-height:24px}
+    .shelf-route-bottom{grid-template-columns:1fr}
+}
 .shelf-visual-summary{
     margin-top:12px;
     display:grid;
@@ -3495,9 +3592,9 @@ elif page == "Cómo ordenar el anaquel":
     with st.container(key="shelf_combo_panel", border=True):
         h1, h2 = st.columns([1.15, .85])
         with h1:
-            st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
+            st.markdown('<div class="shelf-panel-title">Ruta principal de navegación</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">La primera guía muestra cómo inicia la búsqueda; la segunda, cómo se afina. Puedes usar la ruta sugerida o probar otra combinación.</div>',
+                '<div class="shelf-panel-sub">Lee la ruta de izquierda a derecha: primero cómo se ubica el producto y después qué se usa para afinar la búsqueda.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3585,42 +3682,56 @@ elif page == "Cómo ordenar el anaquel":
 
         primary_blocks = _shelf_blocks(primary)
         secondary_blocks = _shelf_blocks(secondary)
+        primary_chips = "".join(
+            f'<span class="shelf-route-chip">{html.escape(str(item))}</span>'
+            for item in primary_blocks[:4]
+        )
+        secondary_chips = "".join(
+            f'<span class="shelf-route-chip">{html.escape(str(item))}</span>'
+            for item in secondary_blocks[:4]
+        )
+
         visual_html = (
-            '<div class="shelf-visual-shell">'
-            '<div class="shelf-visual-top">'
-            '<div class="shelf-reco-summary">'
-            f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} {html.escape(primary)} → {html.escape(secondary)}</div>'
-            '<div class="shelf-confidence-pill">Ruta de navegación</div>'
+            '<div class="shelf-route-grid">'
+              '<div class="shelf-route-card">'
+                '<div class="shelf-route-card-head">'
+                  '<div class="shelf-route-step">1</div>'
+                  '<div>'
+                    '<div class="shelf-route-kicker">Primero</div>'
+                    f'<div class="shelf-route-name">{html.escape(primary)}</div>'
+                    '<div class="shelf-route-explain">Es la primera guía que ayuda a ubicar el producto en el anaquel.</div>'
+                  '</div>'
+                '</div>'
+                '<div class="shelf-route-examples-label">Ejemplos de cómo se vería</div>'
+                f'<div class="shelf-route-chips">{primary_chips}</div>'
+              '</div>'
+              '<div class="shelf-route-arrow">→</div>'
+              '<div class="shelf-route-card secondary">'
+                '<div class="shelf-route-card-head">'
+                  '<div class="shelf-route-step">2</div>'
+                  '<div>'
+                    '<div class="shelf-route-kicker">Después</div>'
+                    f'<div class="shelf-route-name">{html.escape(secondary)}</div>'
+                    '<div class="shelf-route-explain">Es la segunda guía que se usa para afinar la elección.</div>'
+                  '</div>'
+                '</div>'
+                '<div class="shelf-route-examples-label">Ejemplos de cómo se vería</div>'
+                f'<div class="shelf-route-chips">{secondary_chips}</div>'
+              '</div>'
             '</div>'
-            '<div class="shelf-visual-help">La configuración cambia con los filtros o con tu selección manual.</div>'
-            '</div>'
-            '<div class="shelf-unit">'
-            '<div class="shelf-unit-label"><div class="shelf-unit-num">1</div><div>'
-            f'<div class="shelf-unit-main">{html.escape(primary)}</div>'
-            '<div class="shelf-unit-sub">Primera guía para encontrar el producto</div></div></div>'
-            + _blocks_html(primary_blocks)
-            + '</div>'
-            '<div class="shelf-unit">'
-            '<div class="shelf-unit-label secondary"><div class="shelf-unit-num">2</div><div>'
-            f'<div class="shelf-unit-main">{html.escape(secondary)}</div>'
-            '<div class="shelf-unit-sub">Segunda guía para afinar la búsqueda</div></div></div>'
-            + _blocks_html(secondary_blocks, "secondary")
-            + '</div>'
-            '<div class="shelf-stat-grid two">'
-            '<div class="shelf-stat-card secondary">'
-            '<div class="shelf-stat-label">Segunda guía después de la primera</div>'
-            f'<div class="shelf-stat-value">{secondary_prob:.1f}%</div>'
-            f'<div class="shelf-stat-note">Entre quienes eligen <b>{html.escape(primary)}</b> primero, '
-            f'{secondary_prob:.1f}% elige después <b>{html.escape(secondary)}</b>.</div>'
-            f'<div class="shelf-stat-status">Base de esta ruta: {branch_n}</div>'
-            '</div>'
-            '<div class="shelf-stat-card affinity">'
-            '<div class="shelf-stat-label">Lectura de la ruta</div>'
-            f'<div class="shelf-stat-value" style="font-size:1.45rem">{html.escape(primary)} → {html.escape(secondary)}</div>'
-            f'<div class="shelf-stat-note">Primero se ubica el producto con <b>{html.escape(primary)}</b>; '
-            f'después <b>{html.escape(secondary)}</b> ayuda a afinar la búsqueda.</div>'
-            '</div>'
-            '</div>'
+            '<div class="shelf-route-bottom">'
+              '<div class="shelf-route-evidence">'
+                '<div class="shelf-route-label">Qué tan frecuente es esta ruta</div>'
+                f'<div class="shelf-route-big">{secondary_prob:.1f}%</div>'
+                f'<div class="shelf-route-copy">Entre quienes eligieron <b>{html.escape(primary)}</b> como primera guía, '
+                f'{secondary_prob:.1f}% eligió después <b>{html.escape(secondary)}</b>.</div>'
+                f'<div class="shelf-route-note">Base de esta ruta: {branch_n}. Este porcentaje se calcula dentro de esa base, no sobre el total de entrevistados.</div>'
+              '</div>'
+              '<div class="shelf-route-meaning">'
+                '<div class="shelf-route-label">Qué significa para el anaquel</div>'
+                f'<div class="shelf-route-meaning-main">Organizar primero por {html.escape(primary)} y usar {html.escape(secondary)} como segundo nivel de navegación.</div>'
+                '<div class="shelf-route-copy">La primera capa ayuda a encontrar rápidamente el territorio correcto; la segunda permite afinar la elección dentro de ese territorio.</div>'
+              '</div>'
             '</div>'
         )
         st.markdown(visual_html, unsafe_allow_html=True)
