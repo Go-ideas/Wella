@@ -3485,7 +3485,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Orden recomendado</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario. <b>Los tres porcentajes usan la misma métrica: preferencia modelada con Plackett–Luce.</b></div>',
+                '<div class="shelf-panel-sub">Tres niveles descendentes: cada nivel debe tener menor preferencia que el anterior. Los porcentajes provienen del mismo modelo Plackett–Luce.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3496,20 +3496,55 @@ elif page == "Cómo ordenar el anaquel":
                 key="shelf_mode",
             )
 
-        all_options = executive_rank["organizacion"].tolist()
+        # La jerarquía debe ser estrictamente descendente en preferencia PL:
+        # nivel 1 > nivel 2 > nivel 3.
+        eps = 1e-9
         recommended_primary = str(executive_rank.iloc[0]["organizacion"]) if len(executive_rank) else "—"
+
+        valid_primary_options = []
+        for _, row in executive_rank.iterrows():
+            p = float(row["prob_estimada"])
+            lower_count = int((executive_rank["prob_estimada"] < p - eps).sum())
+            if lower_count >= 2:
+                valid_primary_options.append(str(row["organizacion"]))
+
+        if not valid_primary_options:
+            valid_primary_options = executive_rank["organizacion"].astype(str).head(max(1, len(executive_rank) - 2)).tolist()
 
         if shelf_mode == "Orden recomendado":
             primary = recommended_primary
         else:
             primary = st.selectbox(
                 "Selecciona el nivel 1",
-                all_options,
-                index=all_options.index(recommended_primary) if recommended_primary in all_options else 0,
+                valid_primary_options,
+                index=valid_primary_options.index(recommended_primary) if recommended_primary in valid_primary_options else 0,
                 key="shelf_primary",
             )
-            st.caption("Los niveles 2 y 3 se actualizan automáticamente con las alternativas más fuertes para el nivel 1 seleccionado.")
+            st.caption(
+                "Los niveles 2 y 3 se completan automáticamente con las alternativas de mayor preferencia "
+                "que estén por debajo del nivel anterior."
+            )
 
+        selected_primary_row = executive_rank[executive_rank["organizacion"] == primary]
+        primary_pref = float(selected_primary_row.iloc[0]["prob_estimada"]) if len(selected_primary_row) else 0.0
+
+        lower_after_primary = executive_rank[
+            (executive_rank["organizacion"] != primary)
+            & (executive_rank["prob_estimada"] < primary_pref - eps)
+        ].copy()
+
+        secondary = str(lower_after_primary.iloc[0]["organizacion"]) if len(lower_after_primary) else "—"
+        secondary_pref = float(lower_after_primary.iloc[0]["prob_estimada"]) if len(lower_after_primary) else 0.0
+
+        lower_after_secondary = lower_after_primary[
+            (lower_after_primary["organizacion"] != secondary)
+            & (lower_after_primary["prob_estimada"] < secondary_pref - eps)
+        ].copy()
+
+        tertiary = str(lower_after_secondary.iloc[0]["organizacion"]) if len(lower_after_secondary) else "—"
+        tertiary_pref = float(lower_after_secondary.iloc[0]["prob_estimada"]) if len(lower_after_secondary) else 0.0
+
+        # La lectura condicional A1→A2 se conserva como dato adicional de la ruta.
         conditional_strength = 12.0 if n < 60 else 8.0 if n < 100 else 4.0
         conditional = shelf_conditional_model(
             filtered,
@@ -3517,35 +3552,9 @@ elif page == "Cómo ordenar el anaquel":
             shelf_reference,
             strength=conditional_strength,
         )
-
-        cond_options = conditional["organizacion"].tolist()
-        recommended_secondary = str(conditional.iloc[0]["organizacion"]) if len(conditional) else "—"
-
-        # El nivel 2 se recalcula automáticamente según el nivel 1 seleccionado.
-        secondary = recommended_secondary
-
-        remaining_rank = executive_rank[
-            ~executive_rank["organizacion"].isin([primary, secondary])
-        ].copy()
-        recommended_tertiary = (
-            str(remaining_rank.iloc[0]["organizacion"]) if len(remaining_rank) else "—"
-        )
-
-        # El nivel 3 también es automático: toma la alternativa restante con mayor preferencia PL.
-        tertiary = recommended_tertiary
-
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
         branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
-
-        selected_primary_row = executive_rank[executive_rank["organizacion"] == primary]
-        primary_pref = float(selected_primary_row.iloc[0]["prob_estimada"]) if len(selected_primary_row) else 0.0
-
-        selected_secondary_pl_row = executive_rank[executive_rank["organizacion"] == secondary]
-        secondary_pref = float(selected_secondary_pl_row.iloc[0]["prob_estimada"]) if len(selected_secondary_pl_row) else 0.0
-
-        selected_tertiary_row = executive_rank[executive_rank["organizacion"] == tertiary]
-        tertiary_pref = float(selected_tertiary_row.iloc[0]["prob_estimada"]) if len(selected_tertiary_row) else 0.0
 
         def _shelf_blocks(label: str) -> list[str]:
             txt = str(label).lower()
@@ -3647,7 +3656,8 @@ elif page == "Cómo ordenar el anaquel":
         if shelf_mode == "Probar organización":
             st.markdown(
                 f'<div class="shelf-insight"><b>Resultado automático:</b> '
-                f'al elegir <b>{html.escape(primary)}</b> como nivel 1, el modelo completa la jerarquía con '
+                f'al elegir <b>{html.escape(primary)}</b> como nivel 1, se asignan las siguientes alternativas '
+                f'de mayor preferencia pero siempre por debajo del nivel anterior: '
                 f'<b>{html.escape(secondary)}</b> en nivel 2 y <b>{html.escape(tertiary)}</b> en nivel 3.</div>',
                 unsafe_allow_html=True,
             )
