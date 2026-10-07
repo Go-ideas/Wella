@@ -3499,7 +3499,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Usa la recomendación del modelo o prueba manualmente otra forma de organizar.</div>',
+                '<div class="shelf-panel-sub">A1 identifica la primera guía y A2 la segunda. Puedes usar la ruta sugerida o probar otra combinación.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3544,20 +3544,11 @@ elif page == "Cómo ordenar el anaquel":
                 key="shelf_secondary",
             ) if cond_options else "—"
 
-        selected_primary_row = stat_rank[stat_rank["organizacion"] == primary]
-        primary_level = float(selected_primary_row.iloc[0]["nivel_recomendacion"]) if len(selected_primary_row) else 0.0
-        primary_consistency = float(selected_primary_row.iloc[0]["consistencia"]) if len(selected_primary_row) else 0.0
-
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
         secondary_low = float(selected_secondary_row.iloc[0]["ic_bajo"]) if len(selected_secondary_row) else 0.0
         secondary_high = float(selected_secondary_row.iloc[0]["ic_alto"]) if len(selected_secondary_row) else 0.0
-        secondary_lift = float(selected_secondary_row.iloc[0]["lift"]) if len(selected_secondary_row) else 1.0
         branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
-        affinity_delta = (secondary_lift - 1.0) * 100.0 if pd.notna(secondary_lift) else 0.0
-
-        remaining = [x for x in all_options if x not in {primary, secondary}]
-        support_label = remaining[0] if remaining else "Que tenga señalización clara o guías"
 
         def _shelf_blocks(label: str) -> list[str]:
             txt = str(label).lower()
@@ -3596,8 +3587,6 @@ elif page == "Cómo ordenar el anaquel":
 
         primary_blocks = _shelf_blocks(primary)
         secondary_blocks = _shelf_blocks(secondary)
-        support_blocks = _shelf_blocks(support_label)
-
         visual_html = (
             '<div class="shelf-visual-shell">'
             '<div class="shelf-visual-top">'
@@ -3636,8 +3625,6 @@ elif page == "Cómo ordenar el anaquel":
             '</div>'
             '</div>'
         )
-        st.markdown(visual_html, unsafe_allow_html=True)
-
         st.markdown(visual_html, unsafe_allow_html=True)
 
         if shelf_mode == "Probar organización":
@@ -3768,7 +3755,6 @@ elif page == "Cómo ordenar el anaquel":
                 "La estabilidad como líder describe robustez del ranking en bootstrap; no significa que ese porcentaje de entrevistados haya elegido la alternativa."
             )
 
-    with st.container(key="shelf_friction_panel", border=True):
     with st.container(key="shelf_friction_panel", border=True):
         st.markdown('<div class="shelf-panel-title">Fricción al encontrar el producto</div>', unsafe_allow_html=True)
         st.markdown(
