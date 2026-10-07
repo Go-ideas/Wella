@@ -2062,7 +2062,7 @@ def decision_tree_figure(
     other_fill = "#FBFCFE"
     text_color = "#163B60"
 
-    def add_edge(x0, y0, x1, y1, pct, *, highlight=False):
+    def add_edge(x0, y0, x1, y1, pct, verb, *, highlight=False):
         dx = x1 - x0
         c1x, c1y = x0 + dx * 0.34, y0
         c2x, c2y = x1 - dx * 0.34, y1
@@ -2088,6 +2088,38 @@ def decision_tree_figure(
             hoverinfo="skip",
             showlegend=False,
         ))
+
+        # Porcentaje con significado explícito: la cifra siempre describe
+        # qué proporción avanza por esa conexión.
+        t_mid = 0.50
+        x_mid = (
+            ((1-t_mid)**3)*x0
+            + 3*((1-t_mid)**2)*t_mid*c1x
+            + 3*(1-t_mid)*(t_mid**2)*c2x
+            + (t_mid**3)*x1
+        )
+        y_mid = (
+            ((1-t_mid)**3)*y0
+            + 3*((1-t_mid)**2)*t_mid*c1y
+            + 3*(1-t_mid)*(t_mid**2)*c2y
+            + (t_mid**3)*y1
+        )
+        fig.add_annotation(
+            x=x_mid,
+            y=y_mid,
+            text=f"<b>{pct:.1f}%</b><br><span style='font-size:9px'>{verb}</span>",
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            bgcolor="#FFFFFF",
+            bordercolor=main_blue if highlight else "#D8E2EB",
+            borderwidth=1,
+            borderpad=4,
+            font=dict(
+                size=11.5,
+                color=main_blue if highlight else "#60778D",
+            ),
+        )
 
 
     def add_card(x, y, label, pct, cond_pct, base, mode, stage, *, highlight=False, root=False):
@@ -2150,7 +2182,7 @@ def decision_tree_figure(
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
-        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], highlight=h1)
+        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], "empieza aquí", highlight=h1)
         add_card(
             x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
@@ -2158,7 +2190,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], highlight=h2)
+            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], "sigue por aquí", highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
@@ -2166,7 +2198,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], highlight=h3)
+                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], "termina aquí", highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
@@ -3111,11 +3143,11 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                "La línea azul muestra la ruta completa más frecuente. Los porcentajes por etapa quedan disponibles en el detalle de la ruta."
+                "Los porcentajes sobre las líneas indican qué proporción de personas avanza por ese camino: empieza aquí → sigue por aquí → termina aquí."
             )
         else:
             st.caption(
-                "La línea azul corresponde a la ruta seleccionada. Los porcentajes por etapa quedan disponibles en el detalle de la ruta."
+                "Los porcentajes sobre las líneas indican qué proporción de personas avanza por cada paso de la ruta seleccionada."
             )
 
         if selected_second != "—" and selected_third != "—":
