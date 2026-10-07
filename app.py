@@ -1914,15 +1914,24 @@ def decision_tree_figure(
     highlight_path: tuple[str | None, str | None, str | None] | None = None,
     highlight_name: str = "Ruta principal",
     detail_mode: str = "Medio",
+    bayes_fit=None,
 ) -> go.Figure:
     """Árbol ejecutivo con alcance acumulado y porcentaje condicional por rama."""
 
-    step1, mode1, base1 = bayesian_transition_reading(
-        data,
-        reference_data,
-        "decision_1",
-        strength=10.0,
-    )
+    bayes_nodes = posterior_node_summary(bayes_fit) if bayes_fit is not None else None
+
+    if bayes_nodes is not None:
+        step1 = bayes_nodes["d1"][["criterion", "posterior_pct"]].rename(
+            columns={"criterion": "opcion", "posterior_pct": "porcentaje"}
+        )
+        mode1, base1 = "Bayesiana secuencial", int(bayes_fit.n_complete)
+    else:
+        step1, mode1, base1 = bayesian_transition_reading(
+            data,
+            reference_data,
+            "decision_1",
+            strength=10.0,
+        )
 
     requested_first, requested_second, requested_third = (
         highlight_path if highlight_path else (None, None, None)
@@ -1953,12 +1962,21 @@ def decision_tree_figure(
         target1 = data[data["decision_1"] == d1].copy()
         ref1 = reference_data[reference_data["decision_1"] == d1].copy()
 
-        step2, mode2, base2 = bayesian_transition_reading(
-            target1,
-            reference_data,
-            "decision_2",
-            strength=12.0,
-        )
+        if bayes_nodes is not None:
+            d2_src = bayes_nodes["d2"]
+            step2 = d2_src[d2_src["first"] == d1][
+                ["second", "conditional_pct", "base"]
+            ].rename(columns={"second": "opcion", "conditional_pct": "porcentaje"})
+            step2 = step2.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+            base2 = int(step2["base"].iloc[0]) if len(step2) else int(len(target1))
+            mode2 = "Bayesiana secuencial"
+        else:
+            step2, mode2, base2 = bayesian_transition_reading(
+                target1,
+                reference_data,
+                "decision_2",
+                strength=12.0,
+            )
         step2 = step2[step2["opcion"] != d1].copy()
         d2_limit = top_d2 if d1_idx == 0 else max(1, top_d2 - 1)
         selected_d2_for_branch = requested_second if d1 == requested_first else None
@@ -1971,12 +1989,23 @@ def decision_tree_figure(
             ref12 = ref1[ref1["decision_2"] == d2].copy()
             broader_ref = ref1 if len(ref1) else reference_data
 
-            step3, mode3, base3 = bayesian_transition_reading(
-                target12,
-                reference_data,
-                "decision_3",
-                strength=14.0,
-            )
+            if bayes_nodes is not None:
+                d3_src = bayes_nodes["d3"]
+                step3 = d3_src[
+                    (d3_src["first"] == d1) & (d3_src["second"] == d2)
+                ][["third", "conditional_pct", "base"]].rename(
+                    columns={"third": "opcion", "conditional_pct": "porcentaje"}
+                )
+                step3 = step3.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+                base3 = int(step3["base"].iloc[0]) if len(step3) else int(len(target12))
+                mode3 = "Bayesiana secuencial"
+            else:
+                step3, mode3, base3 = bayesian_transition_reading(
+                    target12,
+                    reference_data,
+                    "decision_3",
+                    strength=14.0,
+                )
             step3 = step3[~step3["opcion"].isin([d1, d2])].copy()
             if top_d3 >= 3:
                 # Vista Amplio: mostrar más alternativas de cierre.
