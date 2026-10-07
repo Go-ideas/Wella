@@ -15,7 +15,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.txt pytest
-      - run: python -m py_compile app.py bayesian_journey.py engine.py tendential.py
+      - run: python -m py_compile app.py bayesian_journey.py journey_model_slide.py engine.py tendential.py pages/00_Modelo_Journey.py
       - run: pytest -q
         env:
           PYTHONPATH: .
