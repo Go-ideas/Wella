@@ -2081,7 +2081,7 @@ def decision_tree_figure(
     other_fill = "#FCFDFE"
     text_color = "#163B60"
 
-    def add_edge(x0, y0, x1, y1, pct, verb, *, highlight=False):
+    def add_edge(x0, y0, x1, y1, pct, *, highlight=False):
         dx = x1 - x0
         c1x, c1y = x0 + dx * 0.34, y0
         c2x, c2y = x1 - dx * 0.34, y1
@@ -2095,7 +2095,7 @@ def decision_tree_figure(
             for t in ts
         ]
 
-        width = (4.6 + min(1.0, max(0.0, pct) / 65.0)) if highlight else 1.15
+        width = 4.8 if highlight else 1.05
         fig.add_trace(go.Scatter(
             x=xs,
             y=ys,
@@ -2109,37 +2109,38 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-        # Mantener cifras únicamente sobre la ruta protagonista.
+        # Mostrar cifras sólo en la ruta protagonista y sin texto adicional.
         if not highlight:
             return
 
-        t_mid = 0.50
-        x_mid = (
-            ((1-t_mid)**3)*x0
-            + 3*((1-t_mid)**2)*t_mid*c1x
-            + 3*(1-t_mid)*(t_mid**2)*c2x
-            + (t_mid**3)*x1
+        # Ubicar el valor cerca del nodo de destino, separado de la línea y del texto.
+        t_badge = 0.72
+        x_badge = (
+            ((1-t_badge)**3)*x0
+            + 3*((1-t_badge)**2)*t_badge*c1x
+            + 3*(1-t_badge)*(t_badge**2)*c2x
+            + (t_badge**3)*x1
         )
-        y_mid = (
-            ((1-t_mid)**3)*y0
-            + 3*((1-t_mid)**2)*t_mid*c1y
-            + 3*(1-t_mid)*(t_mid**2)*c2y
-            + (t_mid**3)*y1
+        y_badge = (
+            ((1-t_badge)**3)*y0
+            + 3*((1-t_badge)**2)*t_badge*c1y
+            + 3*(1-t_badge)*(t_badge**2)*c2y
+            + (t_badge**3)*y1
         )
 
-        # El eje Y del árbol está invertido; restar desplaza el badge hacia arriba.
+        # El eje Y está invertido; restar desplaza visualmente el badge hacia arriba.
         fig.add_annotation(
-            x=x_mid,
-            y=y_mid - 0.16,
-            text=f"<b>{pct:.1f}%</b>&nbsp; {verb}",
+            x=x_badge,
+            y=y_badge - 0.13,
+            text=f"<b>{pct:.1f}%</b>",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
             bgcolor="#FFFFFF",
-            bordercolor="#A9CDF4",
+            bordercolor="#7FB5E6",
             borderwidth=1,
-            borderpad=4,
-            font=dict(size=10.8, color="#1D6FB5"),
+            borderpad=3,
+            font=dict(size=11.3, color="#1D6FB5"),
             opacity=0.98,
         )
 
@@ -2163,9 +2164,24 @@ def decision_tree_figure(
 
         full_label = str(label)
         display_label = short_tree_label(full_label)
-        wrapped = _wrap_tree_label(display_label, width=19)
 
-        # Tarjeta principal: el texto nunca compite visualmente con el porcentaje.
+        # Ajustar tamaño del rectángulo al largo real del texto.
+        label_len = len(display_label)
+        wrap_width = 18 if label_len <= 28 else 21
+        wrapped = _wrap_tree_label(display_label, width=wrap_width)
+        line_count = max(1, wrapped.count("<br>") + 1)
+
+        if label_len <= 16:
+            card_width = 142
+        elif label_len <= 26:
+            card_width = 166
+        elif label_len <= 38:
+            card_width = 188
+        else:
+            card_width = 204
+
+        card_height = 32 if line_count == 1 else 40 if line_count == 2 else 48
+
         fig.add_annotation(
             x=x,
             y=y,
@@ -2176,11 +2192,11 @@ def decision_tree_figure(
             align="left",
             bgcolor=main_fill if highlight else other_fill,
             bordercolor=main_border if highlight else other_border,
-            borderwidth=1.8 if highlight else 1,
-            borderpad=7,
-            font=dict(size=12.2 if highlight else 11.6, color=text_color),
-            width=202,
-            height=42,
+            borderwidth=1.7 if highlight else 1,
+            borderpad=6,
+            font=dict(size=11.8 if highlight else 11.2, color=text_color),
+            width=card_width,
+            height=card_height,
         )
 
         # Zona invisible de hover sobre el nodo completo.
@@ -2204,7 +2220,7 @@ def decision_tree_figure(
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
-        add_edge(x_root + 0.11, root_y, x_d1 - 0.20, d1["y"], d1["pct"], "inicia", highlight=h1)
+        add_edge(x_root + 0.11, root_y, x_d1 - 0.24, d1["y"], d1["pct"], highlight=h1)
         add_card(
             x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
@@ -2212,7 +2228,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            add_edge(x_d1 + 0.20, d1["y"], x_d2 - 0.20, d2["y"], d2["cond_pct"], "sigue", highlight=h2)
+            add_edge(x_d1 + 0.24, d1["y"], x_d2 - 0.24, d2["y"], d2["cond_pct"], highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
@@ -2220,7 +2236,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                add_edge(x_d2 + 0.20, d2["y"], x_d3 - 0.20, d3["y"], d3["cond_pct"], "cierra", highlight=h3)
+                add_edge(x_d2 + 0.24, d2["y"], x_d3 - 0.24, d3["y"], d3["cond_pct"], highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
@@ -2248,7 +2264,7 @@ def decision_tree_figure(
 
     fig.update_layout(
         height=height,
-        margin=dict(l=24, r=44, t=30, b=26),
+        margin=dict(l=20, r=34, t=24, b=22),
         plot_bgcolor="white",
         paper_bgcolor="white",
         xaxis=dict(range=[-0.08, 4.52], visible=False, fixedrange=True),
@@ -3156,11 +3172,11 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                "Los porcentajes se muestran sólo en la ruta azul: % que inicia → % que sigue → % que cierra. Las rutas grises quedan como contexto."
+                "Los porcentajes se muestran sólo en la ruta azul. Cada cifra indica la probabilidad bayesiana de avanzar al siguiente paso."
             )
         else:
             st.caption(
-                "Los porcentajes se muestran sólo en la ruta azul seleccionada; las demás rutas quedan como contexto."
+                "Los porcentajes se muestran sólo en la ruta azul seleccionada. Cada cifra indica la probabilidad bayesiana de avanzar al siguiente paso."
             )
 
         if selected_second != "—" and selected_third != "—":
