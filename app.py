@@ -1084,6 +1084,14 @@ section[data-testid="stSidebar"] > div,
 .shelf-route-explain{
     margin-top:5px;font-size:.78rem;line-height:1.38;color:#6F849A;
 }
+.shelf-route-metric{
+    display:inline-flex;align-items:baseline;gap:5px;
+    margin:2px 0 14px 50px;
+    font-size:1.15rem;font-weight:800;color:#173A5E;
+}
+.shelf-route-metric span{
+    font-size:.66rem;font-weight:600;color:#7A8EA4;
+}
 .shelf-route-examples-label{
     font-size:.65rem;font-weight:800;text-transform:uppercase;
     letter-spacing:.05em;color:#8A9CAF;margin-bottom:8px;
@@ -2706,21 +2714,6 @@ if clicked_page is not None and clicked_page != st.session_state["nav_page"]:
 
 page = st.session_state["nav_page"]
 
-st.markdown(
-    '''
-    <div class="nav-guide">
-      <div class="nav-guide-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="8" fill="none" stroke="#8098B0" stroke-width="1.7"/>
-          <path d="M14.8 9.2l-1.7 4-4 1.7 1.7-4 4-1.7z" fill="none" stroke="#8098B0" stroke-width="1.7" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>Cada sección te permite profundizar en la decisión de compra, los drivers de elección, el riesgo de cambio y las oportunidades en anaquel.</div>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
-
 # LOCKED SECTION — RESUMEN
 # Aprobado por el usuario el 2026-10-01. No modificar sin solicitud explícita.
 if page == "Resumen":
@@ -2785,33 +2778,12 @@ if page == "Resumen":
     )
     st.markdown(cards_html, unsafe_allow_html=True)
 
-    alcance = decision_reach(stage).head(6).copy()
-
     if is_tendential:
         md = maxdiff_tendential(filtered, reference).head(5).copy()
         md["valor"] = md["tendencial"]
     else:
         md = maxdiff_compare(filtered, df).head(5).copy()
         md["valor"] = md["segmento"]
-
-    dynamic_insights = get_cached_dynamic_insights(
-        filters,
-        reading_mode,
-        n,
-        alcance,
-        md,
-        k,
-        language,
-    )
-
-    st.markdown(
-        '<div class="summary-grid">'
-        + reach_panel_html(alcance, dynamic_insights["reach"])
-        + drivers_panel_html(md, dynamic_insights["drivers"])
-        + substitution_panel_html(k, dynamic_insights["substitution"], language)
-        + '</div>',
-        unsafe_allow_html=True,
-    )
 
     top_driver = md.sort_values("valor", ascending=False).iloc[0]
     brand_risk = float(k["cambia_marca_si_falta_marca"])
@@ -2984,14 +2956,6 @@ elif page == "Cómo se decide":
     focus_branch = False
 
     if explore_mode == "Explorar una ruta":
-        st.markdown(
-            '<div class="decision-explore-panel">'
-            '<div class="decision-explore-kicker">Exploración interactiva</div>'
-            '<div class="decision-explore-copy">Elige el siguiente paso y el cierre. La ruta seleccionada se resalta sin perder el contexto del árbol.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
         r1, r2 = st.columns([1.0, 1.0])
 
         with r1:
@@ -3047,12 +3011,6 @@ elif page == "Cómo se decide":
     first_choice_for_tree = selected_first if start_from != "Todos" else None
 
     with st.container(key="decision_tree_panel", border=True):
-        st.markdown(
-            '<div class="decision-tree-title">Árbol de decisión</div>'
-            '<div class="decision-tree-sub">El texto y el porcentaje se muestran por separado para facilitar la lectura. Pasa el cursor sobre un nodo para ver la base y el tipo de lectura.</div>',
-            unsafe_allow_html=True,
-        )
-
         st.markdown(
             """
             <div class="tree-column-heads">
@@ -3166,28 +3124,6 @@ elif page == "Qué pesa más":
         """,
         unsafe_allow_html=True,
     )
-
-    card_html = '<div class="driver-top-grid">'
-    for rank, (_, row) in enumerate(top3.iterrows(), start=1):
-        delta = float(row["delta_actual"])
-        delta_text = (
-            f"{delta:+.1f} vs {benchmark_label}"
-            if abs(delta) >= 0.05
-            else f"En línea con {benchmark_label.lower()}"
-        )
-        card_html += (
-            '<div class="driver-top-card">'
-            f'<div class="driver-rank">{rank}</div>'
-            '<div>'
-            f'<div class="driver-card-kicker">Driver #{rank}</div>'
-            f'<div class="driver-card-name">{html.escape(str(row["driver"]))}</div>'
-            f'<div class="driver-card-note">{html.escape(delta_text)}</div>'
-            '</div>'
-            f'<div class="driver-card-value">{float(row["actual"]):.1f}</div>'
-            '</div>'
-        )
-    card_html += '</div>'
-    st.markdown(card_html, unsafe_allow_html=True)
 
     with st.container(key="driver_chart_panel", border=True):
         h1, h2 = st.columns([1.25, .75])
@@ -3480,31 +3416,6 @@ elif page == "Qué pasa si falta...":
         fig.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
         st.plotly_chart(fig, use_container_width=True)
 
-        if len(t):
-            lead = t.iloc[0]
-            lead_label = str(lead["respuesta"])
-            lead_pct = float(lead["porcentaje"])
-            if scenario == "Marca no disponible":
-                context = (
-                    f"Ante la falta de marca, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
-                    f"({lead_pct:.1f}%)."
-                )
-            elif scenario == "Tono/color no disponible":
-                context = (
-                    f"Si falta el {html.escape(language['concept'])}, la reacción dominante es "
-                    f"<b>{html.escape(lead_label)}</b> ({lead_pct:.1f}%)."
-                )
-            else:
-                context = (
-                    f"Sin promoción, la respuesta más frecuente es <b>{html.escape(lead_label)}</b> "
-                    f"({lead_pct:.1f}%)."
-                )
-
-            st.markdown(
-                f'<div class="risk-insight">{context}</div>',
-                unsafe_allow_html=True,
-            )
-
     st.caption("Los porcentajes describen la reacción declarada ante cada escenario; no representan una proyección de ventas.")
 
 elif page == "Cómo ordenar el anaquel":
@@ -3547,7 +3458,7 @@ elif page == "Cómo ordenar el anaquel":
             <div>
               <div class="shelf-header-kicker">Anaquel</div>
               <div class="shelf-header-title">Cómo facilitar la compra en anaquel</div>
-              <div class="shelf-header-sub">Muestra qué guía ayuda primero a encontrar el producto y cuál funciona como segunda ayuda.</div>
+              <div class="shelf-header-sub">Traduce las preferencias de navegación en una jerarquía práctica para el anaquel.</div>
             </div>
           </div>
           <div class="shelf-meta">
@@ -3568,41 +3479,12 @@ elif page == "Cómo ordenar el anaquel":
         .reset_index(drop=True)
         .copy()
     )
-    top3 = executive_rank.head(3).copy()
-    role_labels = {
-        1: "Prioridad #1",
-        2: "Prioridad #2",
-        3: "Prioridad #3",
-    }
-    cards = '<div class="shelf-top-grid">'
-    for rank, (_, row) in enumerate(top3.iterrows(), start=1):
-        preference = float(row["prob_estimada"])
-        cards += (
-            '<div class="shelf-top-card">'
-            '<div class="shelf-card-topline">'
-            '<div class="shelf-card-titlewrap">'
-            f'<div class="shelf-rank">{rank}</div>'
-            '<div>'
-            f'<div class="shelf-card-kicker">{role_labels.get(rank, "Alternativa")}</div>'
-            f'<div class="shelf-card-name">{html.escape(str(row["organizacion"]))}</div>'
-            '</div></div>'
-            f'<div class="shelf-card-value">{preference:.1f}%</div>'
-            '</div>'
-            '<div class="shelf-card-metrics">'
-            f'<div class="shelf-card-chip">Preferencia estimada <strong>{preference:.1f}%</strong></div>'
-            '</div>'
-            '</div>'
-        )
-    cards += '</div>'
-    st.markdown(cards, unsafe_allow_html=True)
-    st.caption("La preferencia estimada indica el peso relativo de cada alternativa. No es un índice 0–100.")
-
     with st.container(key="shelf_combo_panel", border=True):
         h1, h2 = st.columns([1.15, .85])
         with h1:
-            st.markdown('<div class="shelf-panel-title">Jerarquía de navegación en 3 niveles</div>', unsafe_allow_html=True)
+            st.markdown('<div class="shelf-panel-title">Orden recomendado</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Lee de izquierda a derecha: primero cómo se ubica el producto, después cómo se afina y finalmente qué funciona como apoyo complementario.</div>',
+                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3613,7 +3495,7 @@ elif page == "Cómo ordenar el anaquel":
                 key="shelf_mode",
             )
 
-        all_options = stat_rank["organizacion"].tolist()
+        all_options = executive_rank["organizacion"].tolist()
         recommended_primary = str(executive_rank.iloc[0]["organizacion"]) if len(executive_rank) else "—"
 
         if shelf_mode == "Orden recomendado":
@@ -3667,9 +3549,10 @@ elif page == "Cómo ordenar el anaquel":
 
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
-        secondary_low = float(selected_secondary_row.iloc[0]["ic_bajo"]) if len(selected_secondary_row) else 0.0
-        secondary_high = float(selected_secondary_row.iloc[0]["ic_alto"]) if len(selected_secondary_row) else 0.0
         branch_n = int(selected_secondary_row.iloc[0]["n_rama"]) if len(selected_secondary_row) else 0
+
+        selected_primary_row = executive_rank[executive_rank["organizacion"] == primary]
+        primary_pref = float(selected_primary_row.iloc[0]["prob_estimada"]) if len(selected_primary_row) else 0.0
 
         selected_tertiary_row = executive_rank[executive_rank["organizacion"] == tertiary]
         tertiary_pref = float(selected_tertiary_row.iloc[0]["prob_estimada"]) if len(selected_tertiary_row) else 0.0
@@ -3702,13 +3585,6 @@ elif page == "Cómo ordenar el anaquel":
                 return ["Necesidad visible", "Uso", "Beneficio clave", "Producto recomendado"]
             return ["Zona 1", "Zona 2", "Zona 3", "Zona 4"]
 
-        def _blocks_html(items: list[str], css_class: str = "") -> str:
-            cells = "".join(
-                f'<div class="shelf-product">{html.escape(str(item))}</div>'
-                for item in items[:4]
-            )
-            return f'<div class="shelf-products {css_class}">{cells}</div>'
-
         primary_blocks = _shelf_blocks(primary)
         secondary_blocks = _shelf_blocks(secondary)
         tertiary_blocks = _shelf_blocks(tertiary)
@@ -3731,11 +3607,12 @@ elif page == "Cómo ordenar el anaquel":
                 '<div class="shelf-route-card-head">'
                   '<div class="shelf-route-step">1</div>'
                   '<div>'
-                    '<div class="shelf-route-kicker">Primero</div>'
+                    '<div class="shelf-route-kicker">Guía principal</div>'
                     f'<div class="shelf-route-name">{html.escape(primary)}</div>'
-                    '<div class="shelf-route-explain">Guía principal para ubicar el producto en el anaquel.</div>'
+                    '<div class="shelf-route-explain">Ayuda a ubicar primero el producto.</div>'
                   '</div>'
                 '</div>'
+                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>preferencia estimada</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
@@ -3744,11 +3621,12 @@ elif page == "Cómo ordenar el anaquel":
                 '<div class="shelf-route-card-head">'
                   '<div class="shelf-route-step">2</div>'
                   '<div>'
-                    '<div class="shelf-route-kicker">Después</div>'
+                    '<div class="shelf-route-kicker">Segundo filtro</div>'
                     f'<div class="shelf-route-name">{html.escape(secondary)}</div>'
-                    '<div class="shelf-route-explain">Segunda guía para afinar la elección.</div>'
+                    '<div class="shelf-route-explain">Afina la elección dentro del primer nivel.</div>'
                   '</div>'
                 '</div>'
+                f'<div class="shelf-route-metric">{secondary_prob:.1f}% <span>de quienes empiezan por el nivel 1</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{secondary_chips}</div>'
               '</div>'
@@ -3757,34 +3635,21 @@ elif page == "Cómo ordenar el anaquel":
                 '<div class="shelf-route-card-head">'
                   '<div class="shelf-route-step">3</div>'
                   '<div>'
-                    '<div class="shelf-route-kicker">Complementa</div>'
+                    '<div class="shelf-route-kicker">Apoyo complementario</div>'
                     f'<div class="shelf-route-name">{html.escape(tertiary)}</div>'
-                    '<div class="shelf-route-explain">Tercer nivel recomendado entre las alternativas restantes.</div>'
+                    '<div class="shelf-route-explain">Refuerza la navegación como tercer nivel.</div>'
                   '</div>'
                 '</div>'
+                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>preferencia estimada · modelado</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
             '</div>'
-            '<div class="shelf-route-bottom">'
-              '<div class="shelf-route-evidence">'
-                '<div class="shelf-route-label">Ruta observada 1 → 2</div>'
-                f'<div class="shelf-route-big">{secondary_prob:.1f}%</div>'
-                f'<div class="shelf-route-copy">Entre quienes eligieron <b>{html.escape(primary)}</b> primero, '
-                f'{secondary_prob:.1f}% eligió después <b>{html.escape(secondary)}</b>.</div>'
-                f'<div class="shelf-route-note">Base de esta ruta: {branch_n}.</div>'
-              '</div>'
-              '<div class="shelf-route-evidence" style="background:#F7F9FB;border-color:#E1E8EF">'
-                '<div class="shelf-route-label">Nivel 3 complementario</div>'
-                f'<div class="shelf-route-big">{tertiary_pref:.1f}%</div>'
-                f'<div class="shelf-route-copy"><b>{html.escape(tertiary)}</b> es la alternativa restante con mayor preferencia modelada.</div>'
-                '<div class="shelf-route-note">Este tercer nivel es una recomendación modelada; el cuestionario mide directamente primera y segunda ayuda.</div>'
-              '</div>'
-              '<div class="shelf-route-meaning">'
-                '<div class="shelf-route-label">Qué significa para el anaquel</div>'
-                f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
-                '<div class="shelf-route-copy">La propuesta combina una primera guía clara, un segundo filtro para afinar y un tercer apoyo complementario para facilitar la elección.</div>'
-              '</div>'
+            '<div class="shelf-route-meaning" style="margin-top:14px">'
+              '<div class="shelf-route-label">Lectura para el anaquel</div>'
+              f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
+              '<div class="shelf-route-copy">Los niveles 1 y 2 provienen de la secuencia declarada A1→A2; el nivel 3 es el apoyo complementario con mayor preferencia modelada entre las alternativas restantes.</div>'
+              f'<div class="shelf-route-note">Base de la ruta 1→2: {branch_n}.</div>'
             '</div>'
         )
         st.markdown(visual_html, unsafe_allow_html=True)
@@ -3792,8 +3657,7 @@ elif page == "Cómo ordenar el anaquel":
         if shelf_mode == "Probar organización":
             st.markdown(
                 f'<div class="shelf-insight"><b>Jerarquía probada:</b> '
-                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> → <b>{html.escape(tertiary)}</b>. '
-                f'La relación observada entre nivel 1 y 2 es <b>{secondary_prob:.1f}%</b>; el nivel 3 funciona como apoyo complementario modelado.</div>',
+                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> → <b>{html.escape(tertiary)}</b>.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -3842,29 +3706,6 @@ elif page == "Cómo ordenar el anaquel":
             ticksuffix="%",
         )
         st.plotly_chart(fig, use_container_width=True)
-
-        simple = executive_rank[[
-            "organizacion",
-            "prob_estimada",
-        ]].copy()
-        simple["Posición"] = range(1, len(simple) + 1)
-        simple["Lectura"] = simple["Posición"].map({
-            1: "Principal",
-            2: "Segunda alternativa",
-            3: "Tercera alternativa",
-        }).fillna("Secundaria")
-        simple = simple.rename(columns={
-            "organizacion": "Organización",
-            "prob_estimada": "Preferencia estimada",
-        })[["Organización", "Preferencia estimada", "Posición", "Lectura"]]
-
-        st.dataframe(
-            simple.style.format({
-                "Preferencia estimada": "{:.1f}%",
-            }),
-            use_container_width=True,
-            hide_index=True,
-        )
 
         with st.expander("Ver detalle estadístico"):
             st.markdown(
@@ -3935,14 +3776,6 @@ elif page == "Cómo ordenar el anaquel":
             barriers = barriers.sort_values("porcentaje", ascending=False).reset_index(drop=True)
             barriers["etiqueta"] = barriers["porcentaje"].map(lambda x: f"{float(x):.1f}%")
 
-            lead_barrier = barriers.iloc[0]
-            st.markdown(
-                f'<div class="shelf-friction-alert">{icon_svg("warning", "#B84A5A")}'
-                f'<div><div class="shelf-friction-alert-main">{html.escape(str(lead_barrier["barrera"]))}</div>'
-                f'<div class="shelf-friction-alert-sub">Principal fricción declarada · {float(lead_barrier["porcentaje"]):.1f}%</div></div></div>',
-                unsafe_allow_html=True,
-            )
-
             fig2 = px.bar(
                 barriers.sort_values("porcentaje"),
                 x="porcentaje",
@@ -3963,10 +3796,6 @@ elif page == "Cómo ordenar el anaquel":
             )
             fig2.update_xaxes(showgrid=True, gridcolor="#E8EDF3", zeroline=False, ticksuffix="%")
             st.plotly_chart(fig2, use_container_width=True)
-
-    st.caption(
-        "La ruta de navegación utiliza la primera y segunda ayuda declaradas. El detalle estadístico queda disponible sólo para validación técnica."
-    )
 
 
 st.markdown(
