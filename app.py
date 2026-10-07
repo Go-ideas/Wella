@@ -3064,6 +3064,10 @@ elif page == "Cómo se decide":
         main_second = str(main_row["second"])
         main_third = str(main_row["third"])
         main_route_pct = float(main_row["posterior_mean_pct"])
+        main_route_ci_low = float(main_row["ci_low_pct"])
+        main_route_ci_high = float(main_row["ci_high_pct"])
+        main_route_stability = float(main_row["p_top1_pct"])
+        main_route_base = int(main_row["base_d3"])
 
         step1 = bayes_nodes["d1"][["criterion", "posterior_pct"]].rename(
             columns={"criterion": "opcion", "posterior_pct": "porcentaje"}
@@ -3099,12 +3103,27 @@ elif page == "Cómo se decide":
         main_third = main_path.get("third", "—")
         main_third_pct = float(main_path.get("third_pct", 0.0))
         main_route_pct = float(main_path.get("route_pct", 0.0))
+        main_route_ci_low = main_route_pct
+        main_route_ci_high = main_route_pct
+        main_route_stability = 0.0
+        main_route_base = int(len(filtered))
         step1, _, _ = bayesian_transition_reading(
             filtered,
             base_reference,
             "decision_1",
             strength=10.0,
         )
+
+    if not bayes_ready:
+        route_stability_label = "No disponible"
+    elif main_route_base < 30:
+        route_stability_label = "Exploratoria"
+    elif main_route_stability >= 80:
+        route_stability_label = "Alta"
+    elif main_route_stability >= 55:
+        route_stability_label = "Media"
+    else:
+        route_stability_label = "Baja"
 
     first_options = step1["opcion"].tolist()
 
@@ -3127,6 +3146,10 @@ elif page == "Cómo se decide":
             <div class="decision-meta-card">
               <div class="decision-meta-label">La secuencia describe bien la decisión</div>
               <div class="decision-meta-value">{k_decision["validacion_arbol"]:.1f}%</div>
+            </div>
+            <div class="decision-meta-card">
+              <div class="decision-meta-label">Estabilidad de la ruta</div>
+              <div class="decision-meta-value">{route_stability_label}</div>
             </div>
           </div>
         </div>
@@ -3376,7 +3399,10 @@ elif page == "Cómo se decide":
             f'<div class="decision-dynamic-insight"><b>Ruta mostrada:</b> {route_text}'
         )
         if route_legend.startswith("Ruta principal"):
-            route_summary += f' <span style="color:#6B7E93">· representa {main_route_pct:.1f}% del total</span>'
+            route_summary += (
+                f' <span style="color:#6B7E93">· {main_route_pct:.1f}% del total'
+                f' · estabilidad {route_stability_label.lower()}</span>'
+            )
         route_summary += '</div>'
         st.markdown(route_summary, unsafe_allow_html=True)
 
@@ -3390,6 +3416,12 @@ elif page == "Cómo se decide":
                 "P(D1), luego P(D1)×P(D2|D1), y finalmente P(D1)×P(D2|D1)×P(D3|D1,D2). "
                 "Por construcción, los porcentajes de una misma ruta siempre van de mayor a menor."
             )
+            if bayes_ready:
+                st.markdown(
+                    f"**Ruta principal:** {main_route_pct:.2f}% "
+                    f"(intervalo creíble 90%: {main_route_ci_low:.2f}%–{main_route_ci_high:.2f}%). "
+                    f"Fue la ruta #1 en {main_route_stability:.1f}% de las simulaciones posteriores."
+                )
 
         with st.expander("Ver probabilidades de transición de esta ruta"):
             st.markdown(
