@@ -3465,14 +3465,13 @@ elif page == "Cómo ordenar el anaquel":
     )
     top3 = executive_rank.head(3).copy()
     role_labels = {
-        1: "Guía principal",
-        2: "Segunda guía",
-        3: "Apoyo complementario",
+        1: "Prioridad #1",
+        2: "Prioridad #2",
+        3: "Prioridad #3",
     }
     cards = '<div class="shelf-top-grid">'
     for rank, (_, row) in enumerate(top3.iterrows(), start=1):
         preference = float(row["prob_estimada"])
-        position = float(row["posicion_media"])
         cards += (
             '<div class="shelf-top-card">'
             '<div class="shelf-card-topline">'
@@ -3486,7 +3485,6 @@ elif page == "Cómo ordenar el anaquel":
             '</div>'
             '<div class="shelf-card-metrics">'
             f'<div class="shelf-card-chip">Preferencia estimada <strong>{preference:.1f}%</strong></div>'
-            f'<div class="shelf-card-chip">Posición media <strong>{position:.2f}</strong></div>'
             '</div>'
             '</div>'
         )
@@ -3499,7 +3497,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Anaquel visual dinámico</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">A1 identifica la primera guía y A2 la segunda. Puedes usar la ruta sugerida o probar otra combinación.</div>',
+                '<div class="shelf-panel-sub">La primera guía muestra cómo inicia la búsqueda; la segunda, cómo se afina. Puedes usar la ruta sugerida o probar otra combinación.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3592,7 +3590,7 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-visual-top">'
             '<div class="shelf-reco-summary">'
             f'<div class="shelf-visual-badge">{icon_svg("grid", "#155E98")} {html.escape(primary)} → {html.escape(secondary)}</div>'
-            '<div class="shelf-confidence-pill">Ruta A1 → A2</div>'
+            '<div class="shelf-confidence-pill">Ruta de navegación</div>'
             '</div>'
             '<div class="shelf-visual-help">La configuración cambia con los filtros o con tu selección manual.</div>'
             '</div>'
@@ -3659,10 +3657,8 @@ elif page == "Cómo ordenar el anaquel":
                 marker=dict(color=bar_colors),
                 hovertemplate=(
                     "<b>%{y}</b><br>"
-                    "Preferencia estimada: %{x:.1f}%<br>"
-                    "Posición media: %{customdata[0]:.2f}<extra></extra>"
+                    "Preferencia estimada: %{x:.1f}%<extra></extra>"
                 ),
-                customdata=ranked_plot[["posicion_media"]].to_numpy(),
             )
         )
         max_pref = float(ranked_plot["prob_estimada"].max()) if len(ranked_plot) else 0.0
@@ -3686,24 +3682,17 @@ elif page == "Cómo ordenar el anaquel":
         simple = executive_rank[[
             "organizacion",
             "prob_estimada",
-            "ic_bajo",
-            "ic_alto",
-            "posicion_media",
         ]].copy()
         simple["Posición"] = range(1, len(simple) + 1)
         simple["Lectura"] = simple["Posición"].map({
-            1: "Guía principal",
-            2: "Segunda guía",
-            3: "Apoyo complementario",
+            1: "Principal",
+            2: "Segunda alternativa",
+            3: "Tercera alternativa",
         }).fillna("Secundaria")
-        simple["IC 95%"] = simple.apply(
-            lambda r: f'{float(r["ic_bajo"]):.1f}%–{float(r["ic_alto"]):.1f}%',
-            axis=1,
-        )
         simple = simple.rename(columns={
             "organizacion": "Organización",
             "prob_estimada": "Preferencia estimada",
-        })[["Organización", "Preferencia estimada", "IC 95%", "Posición", "Lectura"]]
+        })[["Organización", "Preferencia estimada", "Posición", "Lectura"]]
 
         st.dataframe(
             simple.style.format({
@@ -3812,7 +3801,7 @@ elif page == "Cómo ordenar el anaquel":
             st.plotly_chart(fig2, use_container_width=True)
 
     st.caption(
-        "La vista de anaquel usa A1 como primera guía y A2 como segunda guía. E1/E2 se utiliza sólo como diagnóstico de fricción."
+        "La ruta de navegación utiliza la primera y segunda ayuda declaradas. El detalle estadístico queda disponible sólo para validación técnica."
     )
 
 
