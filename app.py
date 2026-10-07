@@ -50,6 +50,12 @@ from tendential import (
     friction_tendential,
     categorical_tendential,
 )
+from bayesian_journey import (
+    SequentialBayesConfig,
+    fit_sequential_bayes,
+    posterior_node_summary,
+    posterior_route_summary,
+)
 
 st.set_page_config(
     page_title="Wella | Decision Simulator",
@@ -57,6 +63,28 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+@st.cache_data(show_spinner=False)
+def cached_sequential_journey(
+    target_df: pd.DataFrame,
+    prior_df: pd.DataFrame,
+    simulations: int = 5000,
+):
+    """Fit and cache the formal sequential Bayesian journey for the active cut."""
+    cfg = SequentialBayesConfig(simulations=int(simulations))
+    fit = fit_sequential_bayes(
+        target_df,
+        prior_df=prior_df,
+        config=cfg,
+    )
+    nodes = posterior_node_summary(fit)
+    routes = posterior_route_summary(
+        fit,
+        simulations=cfg.simulations,
+        random_seed=cfg.random_seed,
+    )
+    return fit, nodes, routes
 
 st.markdown(
     """
