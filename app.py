@@ -2132,7 +2132,7 @@ def decision_tree_figure(
         fig.add_annotation(
             x=x + 0.205,
             y=y,
-            text=f"<b>{pct:.1f}%</b>",
+            text=f"<b>{cond_pct:.1f}%</b>",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
@@ -2153,8 +2153,8 @@ def decision_tree_figure(
             customdata=[[full_label, pct, cond_pct, base, mode]],
             hovertemplate=(
                 "<b>%{customdata[0]}</b>"
-                "<br>%{customdata[1]:.1f}% del total llega a este punto"
-                "<br>%{customdata[2]:.1f}% dentro de su rama"
+                "<br>%{customdata[2]:.1f}% dentro de la rama anterior"
+                "<br>%{customdata[1]:.1f}% de alcance acumulado sobre el total"
                 "<br>Base de la rama: %{customdata[3]}"
                 "<br>Lectura: %{customdata[4]}<extra></extra>"
             ),
@@ -2173,7 +2173,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["pct"], highlight=h2)
+            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"],
                 highlight=h2,
@@ -2181,7 +2181,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["pct"], highlight=h3)
+                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"],
                     highlight=h3,
@@ -3088,11 +3088,11 @@ elif page == "Cómo se decide":
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Después</div>
-                <div class="tree-column-sub">% del total que llega aquí</div>
+                <div class="tree-column-sub">% dentro de la rama anterior</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Cierre</div>
-                <div class="tree-column-sub">% del total que llega aquí</div>
+                <div class="tree-column-sub">% dentro de la rama anterior</div>
               </div>
             </div>
             """,
@@ -3126,13 +3126,13 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                f"La ruta azul es el camino completo con mayor alcance acumulado ({main_route_pct:.1f}% del total). "
-                "Los porcentajes de las tarjetas también muestran alcance sobre el total; al pasar el cursor puedes ver el porcentaje condicional de cada rama."
+                f"La ruta azul sigue siendo el camino completo con mayor alcance acumulado ({main_route_pct:.1f}% del total). "
+                "Para facilitar la lectura, las tarjetas muestran el porcentaje dentro de la rama anterior; al pasar el cursor puedes ver también el alcance acumulado sobre el total."
             )
         else:
             st.caption(
-                "Los porcentajes de las tarjetas muestran alcance acumulado sobre el total. "
-                "La ruta azul corresponde a la selección actual; al pasar el cursor puedes ver el porcentaje condicional dentro de cada rama."
+                "Los porcentajes de las tarjetas muestran el peso dentro de la rama anterior. "
+                "La ruta azul corresponde a la selección actual; al pasar el cursor puedes ver también el alcance acumulado sobre el total."
             )
 
         if start_from != "Todos":
