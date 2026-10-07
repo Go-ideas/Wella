@@ -1676,6 +1676,37 @@ def conditional_reading(
     return out, mode, base_n
 
 
+def bayesian_transition_reading(
+    target_subset: pd.DataFrame,
+    prior_reference: pd.DataFrame,
+    col: str,
+    *,
+    strength: float = 12.0,
+) -> tuple[pd.DataFrame, str, int]:
+    """Empirical-Bayes transition probability using a Dirichlet prior.
+
+    The observed responses in the current branch are combined with the broader
+    product/category distribution. This stabilizes small branches without
+    replacing the evidence from the selected segment.
+    """
+    base_n = int(target_subset[col].notna().sum()) if col in target_subset.columns else 0
+
+    if col not in target_subset.columns:
+        return pd.DataFrame(columns=["opcion", "porcentaje"]), "Bayesiana", 0
+
+    prior = prior_reference if prior_reference is not None and len(prior_reference) else target_subset
+    t = categorical_tendential(
+        target_subset,
+        prior,
+        col,
+        strength=float(strength),
+        label_name="opcion",
+    )
+    out = t[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
+    out = out.sort_values("porcentaje", ascending=False).reset_index(drop=True)
+    return out, "Bayesiana", base_n
+
+
 def main_decision_path(
     data: pd.DataFrame,
     reference_data: pd.DataFrame,
@@ -1689,13 +1720,11 @@ def main_decision_path(
     Así la ruta principal representa el camino completo más frecuente, no una
     secuencia construida sólo tomando el máximo local en cada paso.
     """
-    step1, mode1, base1 = conditional_reading(
+    step1, mode1, base1 = bayesian_transition_reading(
         data,
         reference_data,
-        reference_data,
         "decision_1",
-        force_tendential=force_tendential,
-        strength=12.0,
+        strength=10.0,
     )
     if step1.empty:
         return {}
@@ -1710,13 +1739,11 @@ def main_decision_path(
         target1 = data[data["decision_1"] == first].copy()
         ref1 = reference_data[reference_data["decision_1"] == first].copy()
 
-        step2, mode2, base2 = conditional_reading(
+        step2, mode2, base2 = bayesian_transition_reading(
             target1,
-            ref1,
             reference_data,
             "decision_2",
-            force_tendential=force_tendential,
-            strength=14.0,
+            strength=12.0,
         )
         step2 = step2[step2["opcion"] != first].reset_index(drop=True)
 
@@ -1745,13 +1772,11 @@ def main_decision_path(
             ref12 = ref1[ref1["decision_2"] == second].copy()
             broader_d3_ref = ref1 if len(ref1) else reference_data
 
-            step3, mode3, base3 = conditional_reading(
+            step3, mode3, base3 = bayesian_transition_reading(
                 target12,
-                ref12,
-                broader_d3_ref,
+                reference_data,
                 "decision_3",
-                force_tendential=force_tendential,
-                strength=12.0,
+                strength=14.0,
             )
             step3 = step3[~step3["opcion"].isin([first, second])].reset_index(drop=True)
 
@@ -1864,13 +1889,11 @@ def decision_tree_figure(
 ) -> go.Figure:
     """Árbol ejecutivo con alcance acumulado y porcentaje condicional por rama."""
 
-    step1, mode1, base1 = conditional_reading(
+    step1, mode1, base1 = bayesian_transition_reading(
         data,
         reference_data,
-        reference_data,
         "decision_1",
-        force_tendential=force_tendential,
-        strength=12.0,
+        strength=10.0,
     )
 
     requested_first, requested_second, requested_third = (
@@ -1902,13 +1925,11 @@ def decision_tree_figure(
         target1 = data[data["decision_1"] == d1].copy()
         ref1 = reference_data[reference_data["decision_1"] == d1].copy()
 
-        step2, mode2, base2 = conditional_reading(
+        step2, mode2, base2 = bayesian_transition_reading(
             target1,
-            ref1,
             reference_data,
             "decision_2",
-            force_tendential=force_tendential,
-            strength=14.0,
+            strength=12.0,
         )
         step2 = step2[step2["opcion"] != d1].copy()
         d2_limit = top_d2 if d1_idx == 0 else max(1, top_d2 - 1)
@@ -1922,13 +1943,11 @@ def decision_tree_figure(
             ref12 = ref1[ref1["decision_2"] == d2].copy()
             broader_ref = ref1 if len(ref1) else reference_data
 
-            step3, mode3, base3 = conditional_reading(
+            step3, mode3, base3 = bayesian_transition_reading(
                 target12,
-                ref12,
-                broader_ref,
+                reference_data,
                 "decision_3",
-                force_tendential=force_tendential,
-                strength=12.0,
+                strength=14.0,
             )
             step3 = step3[~step3["opcion"].isin([d1, d2])].copy()
             if top_d3 >= 3:
@@ -2182,7 +2201,7 @@ def decision_tree_figure(
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
-        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], "empieza aquí", highlight=h1)
+        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], "pasa", highlight=h1)
         add_card(
             x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
@@ -2190,7 +2209,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], "sigue por aquí", highlight=h2)
+            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], "pasa", highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
@@ -2198,7 +2217,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], "termina aquí", highlight=h3)
+                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], "pasa", highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
@@ -2895,7 +2914,11 @@ if page == "Resumen":
 # LOCKED SECTION — DECISIÓN DE COMPRA
 # Versión final aprobada por el usuario el 2026-10-01. No modificar sin solicitud explícita.
 elif page == "Cómo se decide":
-    base_reference = reference if is_tendential else filtered
+    # Prior bayesiano: conserva el/los productos seleccionados, pero abre el resto
+    # de filtros para estabilizar las probabilidades de transición.
+    bayes_filters = {k: [] for k in FILTER_COLUMNS}
+    bayes_filters["producto"] = filters.get("producto", []) or []
+    base_reference = apply_filters(df, bayes_filters)
     k_decision = tendential_kpis(filtered, reference) if is_tendential else executive_kpis(filtered)
     main_path = main_decision_path(
         filtered,
@@ -2911,21 +2934,14 @@ elif page == "Cómo se decide":
     main_third_pct = float(main_path.get("third_pct", 0.0))
     main_route_pct = float(main_path.get("route_pct", 0.0))
 
-    # Distribución D1 disponible siempre: alimenta "Comenzar desde" y la exploración.
-    if is_tendential:
-        step1 = categorical_tendential(
-            filtered,
-            base_reference,
-            "decision_1",
-            strength=12.0,
-            label_name="opcion",
-        )[["opcion", "tendencial"]].rename(columns={"tendencial": "porcentaje"})
-    else:
-        counts1 = filtered["decision_1"].dropna().value_counts()
-        step1 = pd.DataFrame({
-            "opcion": counts1.index.astype(str),
-            "porcentaje": counts1.values / counts1.sum() * 100,
-        })
+    # D1 también se presenta como probabilidad bayesiana para que los tres
+    # niveles usen exactamente la misma lógica.
+    step1, _, _ = bayesian_transition_reading(
+        filtered,
+        base_reference,
+        "decision_1",
+        strength=10.0,
+    )
 
     first_options = step1["opcion"].tolist()
 
@@ -2995,13 +3011,11 @@ elif page == "Cómo se decide":
 
     target1 = filtered[filtered["decision_1"] == selected_first].copy()
     ref1 = base_reference[base_reference["decision_1"] == selected_first].copy()
-    step2, _, _ = conditional_reading(
+    step2, _, _ = bayesian_transition_reading(
         target1,
-        ref1,
         base_reference,
         "decision_2",
-        force_tendential=is_tendential,
-        strength=14.0,
+        strength=12.0,
     )
     step2 = step2[step2["opcion"] != selected_first].reset_index(drop=True)
     second_options = step2["opcion"].tolist()
@@ -3016,13 +3030,11 @@ elif page == "Cómo se decide":
     target12 = target1[target1["decision_2"] == selected_second].copy() if selected_second != "—" else target1.iloc[0:0].copy()
     ref12 = ref1[ref1["decision_2"] == selected_second].copy() if selected_second != "—" else ref1.iloc[0:0].copy()
     broader = ref1 if len(ref1) else base_reference
-    step3, _, _ = conditional_reading(
+    step3, _, _ = bayesian_transition_reading(
         target12,
-        ref12,
-        broader,
+        base_reference,
         "decision_3",
-        force_tendential=is_tendential,
-        strength=12.0,
+        strength=14.0,
     )
     step3 = step3[~step3["opcion"].isin([selected_first, selected_second])].reset_index(drop=True)
     third_options = step3["opcion"].tolist()
@@ -3054,13 +3066,11 @@ elif page == "Cómo se decide":
         # Recalcular D3 al cambiar el segundo paso.
         target12 = target1[target1["decision_2"] == selected_second].copy() if selected_second != "—" else target1.iloc[0:0].copy()
         ref12 = ref1[ref1["decision_2"] == selected_second].copy() if selected_second != "—" else ref1.iloc[0:0].copy()
-        step3, _, _ = conditional_reading(
+        step3, _, _ = bayesian_transition_reading(
             target12,
-            ref12,
-            broader,
+            base_reference,
             "decision_3",
-            force_tendential=is_tendential,
-            strength=12.0,
+            strength=14.0,
         )
         step3 = step3[~step3["opcion"].isin([selected_first, selected_second])].reset_index(drop=True)
         third_options = step3["opcion"].tolist()
@@ -3117,7 +3127,7 @@ elif page == "Cómo se decide":
         )
 
         route_legend = (
-            "Ruta principal · mayor alcance total"
+            "Ruta principal · mayor probabilidad"
             if explore_mode == "Vista general" and start_from == "Todos"
             else "Ruta seleccionada"
         )
@@ -3143,11 +3153,11 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                "Los porcentajes sobre las líneas indican qué proporción de personas avanza por ese camino: empieza aquí → sigue por aquí → termina aquí."
+                "Cada porcentaje es la probabilidad bayesiana de pasar al siguiente paso. La línea azul muestra la ruta completa con mayor probabilidad."
             )
         else:
             st.caption(
-                "Los porcentajes sobre las líneas indican qué proporción de personas avanza por cada paso de la ruta seleccionada."
+                "Cada porcentaje es la probabilidad bayesiana de pasar al siguiente paso dentro de la ruta seleccionada."
             )
 
         if selected_second != "—" and selected_third != "—":
@@ -3171,6 +3181,17 @@ elif page == "Cómo se decide":
             route_summary += f' <span style="color:#6B7E93">· representa {main_route_pct:.1f}% del total</span>'
         route_summary += '</div>'
         st.markdown(route_summary, unsafe_allow_html=True)
+
+        with st.expander("Cómo se calculan estos porcentajes"):
+            st.markdown(
+                "Son **probabilidades bayesianas de transición**. En cada paso se combina lo observado en esa rama "
+                "con la distribución general del producto/categoría mediante un prior Dirichlet. "
+                "Esto evita que una rama pequeña produzca porcentajes demasiado extremos o inestables."
+            )
+            st.markdown(
+                "**Cómo leerlo:** si una conexión muestra 32%, significa que el modelo estima una probabilidad de 32% "
+                "de avanzar por ese camino entre quienes llegaron al paso anterior."
+            )
 
         with st.expander("Ver porcentajes de esta ruta"):
             st.markdown(
