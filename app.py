@@ -1808,9 +1808,10 @@ def decision_tree_figure(
     top_d2: int = 2,
     top_d3: int = 2,
     highlight_path: tuple[str | None, str | None, str | None] | None = None,
+    highlight_name: str = "Ruta principal",
     detail_mode: str = "Medio",
 ) -> go.Figure:
-    """Árbol ejecutivo con tarjetas y probabilidades condicionales por rama."""
+    """Árbol ejecutivo con alcance acumulado y porcentaje condicional por rama."""
 
     step1, mode1, base1 = conditional_reading(
         data,
@@ -1893,18 +1894,26 @@ def decision_tree_figure(
             )
             step3 = _keep_selected(step3, selected_d3_for_branch, d3_limit)
 
-            children3 = [
-                {
+            d1_total = float(r1["porcentaje"])
+            d2_cond = float(r2["porcentaje"])
+            d2_total = d1_total * d2_cond / 100.0
+
+            children3 = []
+            for _, r3 in step3.iterrows():
+                d3_cond = float(r3["porcentaje"])
+                d3_total = d2_total * d3_cond / 100.0
+                children3.append({
                     "label": str(r3["opcion"]),
-                    "pct": float(r3["porcentaje"]),
+                    "pct": d3_total,
+                    "cond_pct": d3_cond,
                     "base": base3,
                     "mode": mode3,
-                }
-                for _, r3 in step3.iterrows()
-            ]
+                })
+
             children2.append({
                 "label": d2,
-                "pct": float(r2["porcentaje"]),
+                "pct": d2_total,
+                "cond_pct": d2_cond,
                 "base": base2,
                 "mode": mode2,
                 "children": children3,
@@ -1913,6 +1922,7 @@ def decision_tree_figure(
         branches.append({
             "label": d1,
             "pct": float(r1["porcentaje"]),
+            "cond_pct": float(r1["porcentaje"]),
             "base": base1,
             "mode": mode1,
             "children": children2,
@@ -2028,7 +2038,7 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-    def add_card(x, y, label, pct, base, mode, *, highlight=False, root=False):
+    def add_card(x, y, label, pct, cond_pct, base, mode, *, highlight=False, root=False):
         if root:
             fig.add_annotation(
                 x=x, y=y,
@@ -2089,23 +2099,24 @@ def decision_tree_figure(
             y=[y],
             mode="markers",
             marker=dict(size=58, color="rgba(0,0,0,0)"),
-            customdata=[[full_label, pct, base, mode]],
+            customdata=[[full_label, pct, cond_pct, base, mode]],
             hovertemplate=(
                 "<b>%{customdata[0]}</b>"
-                "<br>%{customdata[1]:.1f}% dentro de esta rama"
-                "<br>Base de la rama: %{customdata[2]}"
-                "<br>Lectura: %{customdata[3]}<extra></extra>"
+                "<br>%{customdata[1]:.1f}% del total llega a este punto"
+                "<br>%{customdata[2]:.1f}% dentro de su rama"
+                "<br>Base de la rama: %{customdata[3]}"
+                "<br>Lectura: %{customdata[4]}<extra></extra>"
             ),
             showlegend=False,
         ))
 
-    add_card(x_root, root_y, "Compra", 100.0, len(data), "Observada", root=True)
+    add_card(x_root, root_y, "Compra", 100.0, 100.0, len(data), "Observada", root=True)
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
         add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], highlight=h1)
         add_card(
-            x_d1, d1["y"], d1["label"], d1["pct"], d1["base"], d1["mode"],
+            x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"],
             highlight=h1,
         )
 
@@ -2113,7 +2124,7 @@ def decision_tree_figure(
             h2 = h1 and d2["label"] == highlight_second
             add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["pct"], highlight=h2)
             add_card(
-                x_d2, d2["y"], d2["label"], d2["pct"], d2["base"], d2["mode"],
+                x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"],
                 highlight=h2,
             )
 
@@ -2121,7 +2132,7 @@ def decision_tree_figure(
                 h3 = h2 and d3["label"] == highlight_third
                 add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["pct"], highlight=h3)
                 add_card(
-                    x_d3, d3["y"], d3["label"], d3["pct"], d3["base"], d3["mode"],
+                    x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"],
                     highlight=h3,
                 )
 
@@ -2129,7 +2140,7 @@ def decision_tree_figure(
     fig.add_trace(go.Scatter(
         x=[None], y=[None], mode="lines",
         line=dict(color=main_blue, width=5),
-        name="Ruta principal",
+        name=highlight_name,
         showlegend=True,
     ))
     fig.add_trace(go.Scatter(
@@ -3021,21 +3032,26 @@ elif page == "Cómo se decide":
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Primero</div>
-                <div class="tree-column-sub">¿Qué aparece primero?</div>
+                <div class="tree-column-sub">% del total</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Después</div>
-                <div class="tree-column-sub">¿Qué sigue?</div>
+                <div class="tree-column-sub">% del total que llega aquí</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Cierre</div>
-                <div class="tree-column-sub">¿Qué termina definiendo?</div>
+                <div class="tree-column-sub">% del total que llega aquí</div>
               </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+        route_legend = (
+            "Ruta principal · mayor alcance"
+            if explore_mode == "Vista general" and start_from == "Todos"
+            else "Ruta seleccionada"
+        )
         tree_fig = decision_tree_figure(
             filtered,
             base_reference,
@@ -3045,6 +3061,7 @@ elif page == "Cómo se decide":
             top_d2=top_d2,
             top_d3=top_d3,
             highlight_path=highlight_path,
+            highlight_name=route_legend,
             detail_mode=detail,
         )
         tree_fig.update_layout(
@@ -3055,6 +3072,11 @@ elif page == "Cómo se decide":
         )
         st.plotly_chart(tree_fig, use_container_width=True)
 
+        st.caption(
+            "Los porcentajes dentro de las tarjetas muestran el alcance acumulado sobre el total de entrevistados. "
+            "Al pasar el cursor puedes ver también el porcentaje condicional dentro de cada rama."
+        )
+
         if start_from != "Todos":
             start_phrase = f"Comenzando desde <b>{html.escape(selected_first)}</b> ({selected_first_pct:.1f}% del total), "
         else:
@@ -3063,13 +3085,13 @@ elif page == "Cómo se decide":
         if selected_second != "—" and selected_third != "—":
             dynamic_text = (
                 start_phrase
-                + f"<b>{html.escape(selected_second)}</b> concentra {selected_second_pct:.1f}% dentro de esa rama y "
-                + f"<b>{html.escape(selected_third)}</b> alcanza {selected_third_pct:.1f}% en el cierre."
+                + f"dentro de esa rama, <b>{html.escape(selected_second)}</b> es la opción más fuerte ({selected_second_pct:.1f}%); "
+                + f"y dentro de esa segunda rama, <b>{html.escape(selected_third)}</b> lidera el cierre ({selected_third_pct:.1f}%)."
             )
         elif selected_second != "—":
             dynamic_text = (
                 start_phrase
-                + f"<b>{html.escape(selected_second)}</b> concentra {selected_second_pct:.1f}% dentro de esa rama."
+                + f"dentro de esa rama, <b>{html.escape(selected_second)}</b> es la opción más fuerte ({selected_second_pct:.1f}%)."
             )
         else:
             dynamic_text = start_phrase.rstrip(", ") + "."
