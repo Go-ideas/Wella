@@ -3485,7 +3485,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Orden recomendado</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario. <b>Peso estimado</b> = preferencia calculada con Plackett–Luce.</div>',
+                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario. <b>Los tres porcentajes usan la misma métrica: preferencia modelada con Plackett–Luce.</b></div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3555,6 +3555,9 @@ elif page == "Cómo ordenar el anaquel":
         selected_primary_row = executive_rank[executive_rank["organizacion"] == primary]
         primary_pref = float(selected_primary_row.iloc[0]["prob_estimada"]) if len(selected_primary_row) else 0.0
 
+        selected_secondary_pl_row = executive_rank[executive_rank["organizacion"] == secondary]
+        secondary_pref = float(selected_secondary_pl_row.iloc[0]["prob_estimada"]) if len(selected_secondary_pl_row) else 0.0
+
         selected_tertiary_row = executive_rank[executive_rank["organizacion"] == tertiary]
         tertiary_pref = float(selected_tertiary_row.iloc[0]["prob_estimada"]) if len(selected_tertiary_row) else 0.0
 
@@ -3613,7 +3616,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Ayuda a ubicar primero el producto.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>peso estimado</span></div>'
+                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>preferencia modelada</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
@@ -3627,7 +3630,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Afina la elección dentro del primer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{secondary_prob:.1f}% <span>lo elige después</span></div>'
+                f'<div class="shelf-route-metric">{secondary_pref:.1f}% <span>preferencia modelada</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{secondary_chips}</div>'
               '</div>'
@@ -3641,7 +3644,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Refuerza la navegación como tercer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>peso estimado</span></div>'
+                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>preferencia modelada</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
@@ -3649,8 +3652,8 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-route-meaning" style="margin-top:14px">'
               '<div class="shelf-route-label">Lectura para el anaquel</div>'
               f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
-              '<div class="shelf-route-copy">Los niveles 1 y 2 parten de A1→A2; el nivel 3 usa la siguiente alternativa con mayor preferencia Plackett–Luce.</div>'
-              f'<div class="shelf-route-note">Base de la ruta 1→2: {branch_n}.</div>'
+              '<div class="shelf-route-copy">Los tres porcentajes de arriba son comparables entre sí porque provienen del mismo modelo Plackett–Luce.</div>'
+              f'<div class="shelf-route-note"><b>Dato adicional de la ruta:</b> entre quienes eligieron {html.escape(primary)} primero, {secondary_prob:.1f}% eligió después {html.escape(secondary)} (base {branch_n}).</div>'
             '</div>'
         )
         st.markdown(visual_html, unsafe_allow_html=True)
