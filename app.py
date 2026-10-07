@@ -11,6 +11,7 @@ import streamlit as st
 from engine import (
     InvalidDatabase,
     FILTER_COLUMNS,
+    SHELF_BOOTSTRAP_REPS,
     options_for,
     load_database_connection,
     apply_filters,
@@ -3612,7 +3613,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Ayuda a ubicar primero el producto.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>preferencia estimada</span></div>'
+                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>preferencia PL</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
@@ -3640,7 +3641,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Refuerza la navegación como tercer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>preferencia estimada · modelado</span></div>'
+                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>preferencia PL · modelado</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
@@ -3648,7 +3649,7 @@ elif page == "Cómo ordenar el anaquel":
             '<div class="shelf-route-meaning" style="margin-top:14px">'
               '<div class="shelf-route-label">Lectura para el anaquel</div>'
               f'<div class="shelf-route-meaning-main">{html.escape(primary)} → {html.escape(secondary)} → {html.escape(tertiary)}</div>'
-              '<div class="shelf-route-copy">Los niveles 1 y 2 provienen de la secuencia declarada A1→A2; el nivel 3 es el apoyo complementario con mayor preferencia modelada entre las alternativas restantes.</div>'
+              '<div class="shelf-route-copy">Los niveles 1 y 2 parten de A1→A2; el nivel 3 usa la siguiente alternativa con mayor preferencia Plackett–Luce.</div>'
               f'<div class="shelf-route-note">Base de la ruta 1→2: {branch_n}.</div>'
             '</div>'
         )
@@ -3662,9 +3663,9 @@ elif page == "Cómo ordenar el anaquel":
             )
 
     with st.container(key="shelf_rank_panel", border=True):
-        st.markdown('<div class="shelf-panel-title">Comparar alternativas</div>', unsafe_allow_html=True)
+        st.markdown('<div class="shelf-panel-title">Preferencia modelada de organización</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="shelf-panel-sub">Compara directamente la preferencia estimada de cada forma de organizar el anaquel.</div>',
+            '<div class="shelf-panel-sub"><b>Modelo Plackett–Luce:</b> combina la primera ayuda (A1) y la segunda ayuda (A2) para estimar el peso relativo de cada forma de organizar el anaquel.</div>',
             unsafe_allow_html=True,
         )
 
@@ -3685,7 +3686,7 @@ elif page == "Cómo ordenar el anaquel":
                 marker=dict(color=bar_colors),
                 hovertemplate=(
                     "<b>%{y}</b><br>"
-                    "Preferencia estimada: %{x:.1f}%<extra></extra>"
+                    "Preferencia Plackett–Luce: %{x:.1f}%<extra></extra>"
                 ),
             )
         )
@@ -3702,51 +3703,64 @@ elif page == "Cómo ordenar el anaquel":
             showgrid=True,
             gridcolor="#E8EDF3",
             zeroline=False,
-            title="Preferencia estimada",
+            title="Preferencia modelada (Plackett–Luce)",
             ticksuffix="%",
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        with st.expander("Ver detalle estadístico"):
+        with st.expander("Cómo se calcula"):
             st.markdown(
-                "El modelo usa **Plackett–Luce** sobre A1→A2 y 300 remuestras bootstrap. "
-                "Las métricas de consistencia y estabilidad se conservan únicamente para validación técnica. "
-                "**Estabilidad como líder no es porcentaje de personas**: indica cuántas remuestras mantienen una alternativa en el primer lugar."
+                "**Plackett–Luce** aprovecha el orden de respuesta de cada persona: "
+                "**A1 = primera ayuda** y **A2 = segunda ayuda**. Con esas posiciones estima una "
+                "**preferencia modelada** para cada forma de organizar el anaquel. "
+                "Por eso, por ejemplo, 31.9% es una estimación del modelo y no el porcentaje directo de personas que la mencionó."
             )
+            st.markdown(
+                f"Después se repite el cálculo **{SHELF_BOOTSTRAP_REPS} veces** mediante bootstrap. "
+                "Esto sirve para revisar si el orden cambia al volver a muestrear la misma base. "
+                "Si una alternativa lidera en 300/300 remuestras, significa que su **primer lugar es muy estable**; "
+                "**no significa que 100% de los entrevistados la haya elegido**."
+            )
+
             tech = stat_rank[[
                 "organizacion",
-                "nivel_recomendacion",
                 "prob_estimada",
                 "ic_bajo",
                 "ic_alto",
-                "consistencia",
-                "estabilidad_top1",
                 "posicion_media",
-            ]].rename(columns={
+                "estabilidad_top1",
+            ]].copy()
+
+            tech["IC 95%"] = tech.apply(
+                lambda r: f'{float(r["ic_bajo"]):.1f}%–{float(r["ic_alto"]):.1f}%',
+                axis=1,
+            )
+            tech["Lideró en remuestras"] = tech["estabilidad_top1"].map(
+                lambda x: f"{int(round(float(x) / 100.0 * SHELF_BOOTSTRAP_REPS))}/{SHELF_BOOTSTRAP_REPS}"
+            )
+            tech = tech.rename(columns={
                 "organizacion": "Organización",
-                "nivel_recomendacion": "Índice técnico de recomendación",
-                "prob_estimada": "Preferencia modelada",
-                "ic_bajo": "IC 95% bajo",
-                "ic_alto": "IC 95% alto",
-                "consistencia": "Consistencia de posición",
-                "estabilidad_top1": "Estabilidad como líder (bootstrap)",
-                "posicion_media": "Posición media",
-            })
+                "prob_estimada": "Preferencia PL",
+                "posicion_media": "Ranking medio",
+            })[[
+                "Organización",
+                "Preferencia PL",
+                "IC 95%",
+                "Ranking medio",
+                "Lideró en remuestras",
+            ]]
+
             st.dataframe(
                 tech.style.format({
-                    "Índice técnico de recomendación": "{:.0f}",
-                    "Preferencia modelada": "{:.1f}%",
-                    "IC 95% bajo": "{:.1f}%",
-                    "IC 95% alto": "{:.1f}%",
-                    "Consistencia de posición": "{:.0f}",
-                    "Estabilidad como líder (bootstrap)": "{:.1f}%",
-                    "Posición media": "{:.2f}",
+                    "Preferencia PL": "{:.1f}%",
+                    "Ranking medio": "{:.2f}",
                 }),
                 use_container_width=True,
                 hide_index=True,
             )
             st.caption(
-                "La estabilidad como líder describe robustez del ranking en bootstrap; no significa que ese porcentaje de entrevistados haya elegido la alternativa."
+                "Lectura rápida: menor ranking medio = mejor posición. "
+                "“Lideró en remuestras” mide estabilidad del primer lugar, no porcentaje de personas."
             )
 
     with st.container(key="shelf_friction_panel", border=True):
