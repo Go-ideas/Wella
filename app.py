@@ -3134,8 +3134,8 @@ elif page == "Cómo se decide":
             <div class="decision-header-icon">{icon_svg("route", "#1D6FB5")}</div>
             <div>
               <div class="decision-header-kicker">Decisión de compra</div>
-              <div class="decision-header-title">Árbol de decisión de compra</div>
-              <div class="decision-header-sub">Explora cómo avanza la elección y qué alternativas aparecen en cada paso.</div>
+              <div class="decision-header-title">Journey de decisión de compra</div>
+              <div class="decision-header-sub">Muestra cómo avanza la decisión y qué caminos tienen mayor probabilidad.</div>
             </div>
           </div>
           <div class="decision-meta">
@@ -3340,7 +3340,7 @@ elif page == "Cómo se decide":
         )
 
         route_legend = (
-            "Ruta principal"
+            "Ruta de mayor probabilidad"
             if explore_mode == "Vista general" and start_from == "Todos"
             else "Ruta seleccionada"
         )
@@ -3372,7 +3372,7 @@ elif page == "Cómo se decide":
             },
         )
 
-        if route_legend.startswith("Ruta principal"):
+        if route_legend.startswith("Ruta de mayor probabilidad"):
             st.caption(
                 "Cada rama muestra su probabilidad bayesiana acumulada sobre el total. Por eso, dentro de una misma ruta, los porcentajes disminuyen conforme avanza el árbol."
             )
@@ -3434,6 +3434,34 @@ elif page == "Cómo se decide":
             if selected_third != "—":
                 st.markdown(
                     f"**Cierre:** {selected_third_pct:.1f}% de quienes llegaron a **{selected_second}** termina definiendo con **{selected_third}**."
+                )
+
+        if bayes_ready:
+            with st.expander("Validación del Journey"):
+                validation_table = bayes_routes.head(5).copy()
+                validation_table["Journey"] = validation_table["route"]
+                validation_table["Probabilidad"] = validation_table["posterior_mean_pct"].map(
+                    lambda x: f"{x:.2f}%"
+                )
+                validation_table["IC 90%"] = validation_table.apply(
+                    lambda r: f'{r["ci_low_pct"]:.2f}%–{r["ci_high_pct"]:.2f}%',
+                    axis=1,
+                )
+                validation_table["Estabilidad #1"] = validation_table["p_top1_pct"].map(
+                    lambda x: f"{x:.1f}%"
+                )
+                validation_table["Base cierre"] = validation_table["base_d3"].astype(int)
+
+                st.dataframe(
+                    validation_table[
+                        ["Journey", "Probabilidad", "IC 90%", "Estabilidad #1", "Base cierre"]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.caption(
+                    "Estabilidad #1 = porcentaje de simulaciones posteriores en las que ese Journey queda en primer lugar. "
+                    "Una base de cierre menor a 30 debe interpretarse como exploratoria."
                 )
 
 # LOCKED SECTION — DRIVERS CLAVE
