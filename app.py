@@ -2089,6 +2089,39 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
+        # El porcentaje pertenece a la transición, no al nodo.
+        # Desde Compra representa % del total; en los niveles posteriores,
+        # representa % de quienes llegaron al nodo anterior.
+        t_mid = 0.50
+        x_mid = (
+            ((1-t_mid)**3)*x0
+            + 3*((1-t_mid)**2)*t_mid*c1x
+            + 3*(1-t_mid)*(t_mid**2)*c2x
+            + (t_mid**3)*x1
+        )
+        y_mid = (
+            ((1-t_mid)**3)*y0
+            + 3*((1-t_mid)**2)*t_mid*c1y
+            + 3*(1-t_mid)*(t_mid**2)*c2y
+            + (t_mid**3)*y1
+        )
+        fig.add_annotation(
+            x=x_mid,
+            y=y_mid,
+            text=f"<b>{pct:.1f}%</b>",
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            bgcolor="#FFFFFF",
+            bordercolor=main_blue if highlight else "#D8E2EB",
+            borderwidth=1,
+            borderpad=3,
+            font=dict(
+                size=11.5,
+                color=main_blue if highlight else "#60778D",
+            ),
+        )
+
     def add_card(x, y, label, pct, cond_pct, base, mode, stage, *, highlight=False, root=False):
         if root:
             fig.add_annotation(
@@ -2112,7 +2145,7 @@ def decision_tree_figure(
 
         # Tarjeta principal: el texto nunca compite visualmente con el porcentaje.
         fig.add_annotation(
-            x=x - 0.035,
+            x=x,
             y=y,
             text=f"<b>{wrapped}</b>",
             showarrow=False,
@@ -2124,30 +2157,8 @@ def decision_tree_figure(
             borderwidth=1.6 if highlight else 1,
             borderpad=8,
             font=dict(size=12.0, color=text_color),
-            width=205,
+            width=230,
             height=44,
-        )
-
-        # El porcentaje se explica dentro de la propia tarjeta para evitar
-        # comparar denominadores distintos entre columnas.
-        if stage == "Primero":
-            pct_label = "del total"
-        else:
-            pct_label = "de esa rama"
-
-        fig.add_annotation(
-            x=x + 0.205,
-            y=y,
-            text=f"<b>{cond_pct:.1f}%</b><br><span style='font-size:9px'>{pct_label}</span>",
-            showarrow=False,
-            xanchor="center",
-            yanchor="middle",
-            align="center",
-            bgcolor=main_blue if highlight else "#EAF2FA",
-            bordercolor=main_blue if highlight else "#D1DFEC",
-            borderwidth=1,
-            borderpad=5,
-            font=dict(size=13.2, color="white" if highlight else "#173A5E"),
         )
 
         # Zona invisible de hover sobre el nodo completo.
@@ -3090,15 +3101,15 @@ elif page == "Cómo se decide":
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Primero</div>
-                <div class="tree-column-sub">Dónde inicia</div>
+                <div class="tree-column-sub">Primera decisión</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Después</div>
-                <div class="tree-column-sub">Siguiente paso</div>
+                <div class="tree-column-sub">Segunda decisión</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Cierre</div>
-                <div class="tree-column-sub">Qué termina definiendo</div>
+                <div class="tree-column-sub">Decisión final</div>
               </div>
             </div>
             """,
@@ -3133,11 +3144,11 @@ elif page == "Cómo se decide":
         if route_legend.startswith("Ruta principal"):
             st.caption(
                 f"La ruta azul es el camino completo con mayor alcance ({main_route_pct:.1f}% del total). "
-                "Cada tarjeta ya indica su base: el primer paso usa el total y los siguientes usan la rama anterior."
+                "Los porcentajes están sobre las conexiones: desde Compra indican % del total; después indican % de quienes llegaron al paso anterior."
             )
         else:
             st.caption(
-                "La ruta azul corresponde a la selección actual. Cada tarjeta indica si el porcentaje es del total o de la rama anterior."
+                "La ruta azul corresponde a la selección actual. Los porcentajes sobre las conexiones muestran qué proporción avanza al siguiente paso."
             )
 
         if selected_second != "—" and selected_third != "—":
