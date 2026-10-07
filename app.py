@@ -2089,7 +2089,7 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-    def add_card(x, y, label, pct, cond_pct, base, mode, *, highlight=False, root=False):
+    def add_card(x, y, label, pct, cond_pct, base, mode, stage, *, highlight=False, root=False):
         if root:
             fig.add_annotation(
                 x=x, y=y,
@@ -2128,11 +2128,17 @@ def decision_tree_figure(
             height=44,
         )
 
-        # Porcentaje fijo: siempre visible y alineado a la derecha del nodo.
+        # El porcentaje se explica dentro de la propia tarjeta para evitar
+        # comparar denominadores distintos entre columnas.
+        if stage == "Primero":
+            pct_label = "del total"
+        else:
+            pct_label = "de esa rama"
+
         fig.add_annotation(
             x=x + 0.205,
             y=y,
-            text=f"<b>{cond_pct:.1f}%</b>",
+            text=f"<b>{cond_pct:.1f}%</b><br><span style='font-size:9px'>{pct_label}</span>",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
@@ -2141,7 +2147,7 @@ def decision_tree_figure(
             bordercolor=main_blue if highlight else "#D1DFEC",
             borderwidth=1,
             borderpad=5,
-            font=dict(size=13.8, color="white" if highlight else "#173A5E"),
+            font=dict(size=13.2, color="white" if highlight else "#173A5E"),
         )
 
         # Zona invisible de hover sobre el nodo completo.
@@ -2161,13 +2167,13 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-    add_card(x_root, root_y, "Compra", 100.0, 100.0, len(data), "Observada", root=True)
+    add_card(x_root, root_y, "Compra", 100.0, 100.0, len(data), "Observada", "Inicio", root=True)
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
         add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], highlight=h1)
         add_card(
-            x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"],
+            x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
         )
 
@@ -2175,7 +2181,7 @@ def decision_tree_figure(
             h2 = h1 and d2["label"] == highlight_second
             add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], highlight=h2)
             add_card(
-                x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"],
+                x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
             )
 
@@ -2183,7 +2189,7 @@ def decision_tree_figure(
                 h3 = h2 and d3["label"] == highlight_third
                 add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], highlight=h3)
                 add_card(
-                    x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"],
+                    x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
                 )
 
@@ -3084,15 +3090,15 @@ elif page == "Cómo se decide":
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Primero</div>
-                <div class="tree-column-sub">% del total</div>
+                <div class="tree-column-sub">Dónde inicia</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Después</div>
-                <div class="tree-column-sub">% dentro de la rama anterior</div>
+                <div class="tree-column-sub">Siguiente paso</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Cierre</div>
-                <div class="tree-column-sub">% dentro de la rama anterior</div>
+                <div class="tree-column-sub">Qué termina definiendo</div>
               </div>
             </div>
             """,
@@ -3126,30 +3132,26 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                f"La ruta azul sigue siendo el camino completo con mayor alcance acumulado ({main_route_pct:.1f}% del total). "
-                "Para facilitar la lectura, las tarjetas muestran el porcentaje dentro de la rama anterior; al pasar el cursor puedes ver también el alcance acumulado sobre el total."
+                f"La ruta azul es el camino completo con mayor alcance ({main_route_pct:.1f}% del total). "
+                "Cada tarjeta ya indica su base: el primer paso usa el total y los siguientes usan la rama anterior."
             )
         else:
             st.caption(
-                "Los porcentajes de las tarjetas muestran el peso dentro de la rama anterior. "
-                "La ruta azul corresponde a la selección actual; al pasar el cursor puedes ver también el alcance acumulado sobre el total."
+                "La ruta azul corresponde a la selección actual. Cada tarjeta indica si el porcentaje es del total o de la rama anterior."
             )
-
-        if start_from != "Todos":
-            start_phrase = f"Comenzando desde <b>{html.escape(selected_first)}</b> ({selected_first_pct:.1f}% del total), "
-        else:
-            start_phrase = f"Ruta principal: <b>{html.escape(selected_first)}</b> ({selected_first_pct:.1f}% del total), "
 
         if selected_second != "—" and selected_third != "—":
             dynamic_text = (
-                start_phrase
-                + f"dentro de esa rama, <b>{html.escape(selected_second)}</b> es la opción más fuerte ({selected_second_pct:.1f}%); "
-                + f"y dentro de esa segunda rama, <b>{html.escape(selected_third)}</b> lidera el cierre ({selected_third_pct:.1f}%)."
+                f"<b>Cómo leer la ruta azul:</b> {selected_first_pct:.1f}% del total empieza por "
+                f"<b>{html.escape(selected_first)}</b>. De ese grupo, {selected_second_pct:.1f}% sigue por "
+                f"<b>{html.escape(selected_second)}</b>; y de quienes llegan ahí, {selected_third_pct:.1f}% cierra con "
+                f"<b>{html.escape(selected_third)}</b>."
             )
         elif selected_second != "—":
             dynamic_text = (
-                start_phrase
-                + f"dentro de esa rama, <b>{html.escape(selected_second)}</b> es la opción más fuerte ({selected_second_pct:.1f}%)."
+                f"<b>Cómo leer la ruta azul:</b> {selected_first_pct:.1f}% del total empieza por "
+                f"<b>{html.escape(selected_first)}</b>. De ese grupo, {selected_second_pct:.1f}% sigue por "
+                f"<b>{html.escape(selected_second)}</b>."
             )
         else:
             dynamic_text = start_phrase.rstrip(", ") + "."
