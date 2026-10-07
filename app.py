@@ -3503,11 +3503,12 @@ elif page == "Cómo ordenar el anaquel":
             primary = recommended_primary
         else:
             primary = st.selectbox(
-                "Organizar primero por",
+                "Selecciona el nivel 1",
                 all_options,
                 index=all_options.index(recommended_primary) if recommended_primary in all_options else 0,
                 key="shelf_primary",
             )
+            st.caption("Los niveles 2 y 3 se actualizan automáticamente con las alternativas más fuertes para el nivel 1 seleccionado.")
 
         conditional_strength = 12.0 if n < 60 else 8.0 if n < 100 else 4.0
         conditional = shelf_conditional_model(
@@ -3520,15 +3521,8 @@ elif page == "Cómo ordenar el anaquel":
         cond_options = conditional["organizacion"].tolist()
         recommended_secondary = str(conditional.iloc[0]["organizacion"]) if len(conditional) else "—"
 
-        if shelf_mode == "Orden recomendado":
-            secondary = recommended_secondary
-        else:
-            secondary = st.selectbox(
-                "Después apoyar con",
-                cond_options,
-                index=0,
-                key="shelf_secondary",
-            ) if cond_options else "—"
+        # El nivel 2 se recalcula automáticamente según el nivel 1 seleccionado.
+        secondary = recommended_secondary
 
         remaining_rank = executive_rank[
             ~executive_rank["organizacion"].isin([primary, secondary])
@@ -3537,16 +3531,8 @@ elif page == "Cómo ordenar el anaquel":
             str(remaining_rank.iloc[0]["organizacion"]) if len(remaining_rank) else "—"
         )
 
-        if shelf_mode == "Orden recomendado":
-            tertiary = recommended_tertiary
-        else:
-            tertiary_options = remaining_rank["organizacion"].tolist()
-            tertiary = st.selectbox(
-                "Como tercer apoyo",
-                tertiary_options,
-                index=0,
-                key="shelf_tertiary",
-            ) if tertiary_options else "—"
+        # El nivel 3 también es automático: toma la alternativa restante con mayor preferencia PL.
+        tertiary = recommended_tertiary
 
         selected_secondary_row = conditional[conditional["organizacion"] == secondary]
         secondary_prob = float(selected_secondary_row.iloc[0]["prob_condicional"]) if len(selected_secondary_row) else 0.0
@@ -3660,8 +3646,9 @@ elif page == "Cómo ordenar el anaquel":
 
         if shelf_mode == "Probar organización":
             st.markdown(
-                f'<div class="shelf-insight"><b>Jerarquía probada:</b> '
-                f'<b>{html.escape(primary)}</b> → <b>{html.escape(secondary)}</b> → <b>{html.escape(tertiary)}</b>.</div>',
+                f'<div class="shelf-insight"><b>Resultado automático:</b> '
+                f'al elegir <b>{html.escape(primary)}</b> como nivel 1, el modelo completa la jerarquía con '
+                f'<b>{html.escape(secondary)}</b> en nivel 2 y <b>{html.escape(tertiary)}</b> en nivel 3.</div>',
                 unsafe_allow_html=True,
             )
 
