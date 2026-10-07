@@ -2004,23 +2004,23 @@ def decision_tree_figure(
     cursor = 0.0
     # La densidad se adapta al nivel elegido por el cliente.
     if detail_mode == "Simple":
-        leaf_gap = 0.92
-        closure_gap = 1.15
-        d2_group_gap = 0.16
-        branch_gap = 0.42
-        px_per_unit = 61
-    elif detail_mode == "Amplio":
-        leaf_gap = 1.04
-        closure_gap = 1.42
-        d2_group_gap = 0.30
-        branch_gap = 0.58
-        px_per_unit = 67
-    else:
-        leaf_gap = 0.98
-        closure_gap = 1.28
+        leaf_gap = 1.00
+        closure_gap = 1.22
         d2_group_gap = 0.22
-        branch_gap = 0.50
-        px_per_unit = 64
+        branch_gap = 0.52
+        px_per_unit = 63
+    elif detail_mode == "Amplio":
+        leaf_gap = 1.10
+        closure_gap = 1.48
+        d2_group_gap = 0.34
+        branch_gap = 0.66
+        px_per_unit = 68
+    else:
+        leaf_gap = 1.04
+        closure_gap = 1.34
+        d2_group_gap = 0.28
+        branch_gap = 0.58
+        px_per_unit = 65
     for d1 in branches:
         d2_positions = []
         for d2 in d1["children"]:
@@ -2072,13 +2072,13 @@ def decision_tree_figure(
 
     fig = go.Figure()
 
-    x_root, x_d1, x_d2, x_d3 = 0.20, 1.25, 2.55, 3.90
+    x_root, x_d1, x_d2, x_d3 = 0.16, 1.34, 2.78, 4.22
     main_blue = "#2F80ED"
     main_fill = "#F3F8FF"
     main_border = "#2F80ED"
-    other_line = "rgba(151,174,197,0.62)"
-    other_border = "#C9D7E4"
-    other_fill = "#FBFCFE"
+    other_line = "rgba(151,174,197,0.34)"
+    other_border = "#D7E1EA"
+    other_fill = "#FCFDFE"
     text_color = "#163B60"
 
     def add_edge(x0, y0, x1, y1, pct, verb, *, highlight=False):
@@ -2094,7 +2094,8 @@ def decision_tree_figure(
             ((1-t)**3)*y0 + 3*((1-t)**2)*t*c1y + 3*(1-t)*(t**2)*c2y + (t**3)*y1
             for t in ts
         ]
-        width = (4.0 if highlight else 1.55) + min(1.1, max(0.0, pct) / 55.0)
+
+        width = (4.6 + min(1.0, max(0.0, pct) / 65.0)) if highlight else 1.15
         fig.add_trace(go.Scatter(
             x=xs,
             y=ys,
@@ -2108,8 +2109,10 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-        # Porcentaje con significado explícito: la cifra siempre describe
-        # qué proporción avanza por esa conexión.
+        # Mantener cifras únicamente sobre la ruta protagonista.
+        if not highlight:
+            return
+
         t_mid = 0.50
         x_mid = (
             ((1-t_mid)**3)*x0
@@ -2123,21 +2126,21 @@ def decision_tree_figure(
             + 3*(1-t_mid)*(t_mid**2)*c2y
             + (t_mid**3)*y1
         )
+
+        # El eje Y del árbol está invertido; restar desplaza el badge hacia arriba.
         fig.add_annotation(
             x=x_mid,
-            y=y_mid,
-            text=f"<b>{pct:.1f}%</b><br><span style='font-size:9px'>{verb}</span>",
+            y=y_mid - 0.16,
+            text=f"<b>{pct:.1f}%</b>&nbsp; {verb}",
             showarrow=False,
             xanchor="center",
             yanchor="middle",
             bgcolor="#FFFFFF",
-            bordercolor=main_blue if highlight else "#D8E2EB",
+            bordercolor="#A9CDF4",
             borderwidth=1,
             borderpad=4,
-            font=dict(
-                size=11.5,
-                color=main_blue if highlight else "#60778D",
-            ),
+            font=dict(size=10.8, color="#1D6FB5"),
+            opacity=0.98,
         )
 
 
@@ -2173,11 +2176,11 @@ def decision_tree_figure(
             align="left",
             bgcolor=main_fill if highlight else other_fill,
             bordercolor=main_border if highlight else other_border,
-            borderwidth=1.6 if highlight else 1,
-            borderpad=8,
-            font=dict(size=12.0, color=text_color),
-            width=230,
-            height=44,
+            borderwidth=1.8 if highlight else 1,
+            borderpad=7,
+            font=dict(size=12.2 if highlight else 11.6, color=text_color),
+            width=202,
+            height=42,
         )
 
         # Zona invisible de hover sobre el nodo completo.
@@ -2201,7 +2204,7 @@ def decision_tree_figure(
 
     for d1 in branches:
         h1 = d1["label"] == highlight_first
-        add_edge(x_root + 0.12, root_y, x_d1 - 0.22, d1["y"], d1["pct"], "pasa", highlight=h1)
+        add_edge(x_root + 0.11, root_y, x_d1 - 0.20, d1["y"], d1["pct"], "inicia", highlight=h1)
         add_card(
             x_d1, d1["y"], d1["label"], d1["pct"], d1["cond_pct"], d1["base"], d1["mode"], "Primero",
             highlight=h1,
@@ -2209,7 +2212,7 @@ def decision_tree_figure(
 
         for d2 in d1["children"]:
             h2 = h1 and d2["label"] == highlight_second
-            add_edge(x_d1 + 0.22, d1["y"], x_d2 - 0.22, d2["y"], d2["cond_pct"], "pasa", highlight=h2)
+            add_edge(x_d1 + 0.20, d1["y"], x_d2 - 0.20, d2["y"], d2["cond_pct"], "sigue", highlight=h2)
             add_card(
                 x_d2, d2["y"], d2["label"], d2["pct"], d2["cond_pct"], d2["base"], d2["mode"], "Después",
                 highlight=h2,
@@ -2217,7 +2220,7 @@ def decision_tree_figure(
 
             for d3 in d2["children"]:
                 h3 = h2 and d3["label"] == highlight_third
-                add_edge(x_d2 + 0.22, d2["y"], x_d3 - 0.22, d3["y"], d3["cond_pct"], "pasa", highlight=h3)
+                add_edge(x_d2 + 0.20, d2["y"], x_d3 - 0.20, d3["y"], d3["cond_pct"], "cierra", highlight=h3)
                 add_card(
                     x_d3, d3["y"], d3["label"], d3["pct"], d3["cond_pct"], d3["base"], d3["mode"], "Cierre",
                     highlight=h3,
@@ -2248,7 +2251,7 @@ def decision_tree_figure(
         margin=dict(l=24, r=44, t=30, b=26),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        xaxis=dict(range=[-0.08, 4.28], visible=False, fixedrange=True),
+        xaxis=dict(range=[-0.08, 4.52], visible=False, fixedrange=True),
         # Los encabezados viven fuera del gráfico; aquí sólo queda el árbol.
         yaxis=dict(range=[max_y + 0.42, -0.42], visible=False, fixedrange=True),
         hovermode="closest",
@@ -3127,7 +3130,7 @@ elif page == "Cómo se decide":
         )
 
         route_legend = (
-            "Ruta principal · mayor probabilidad"
+            "Ruta principal"
             if explore_mode == "Vista general" and start_from == "Todos"
             else "Ruta seleccionada"
         )
@@ -3153,11 +3156,11 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                "Cada porcentaje es la probabilidad bayesiana de pasar al siguiente paso. La línea azul muestra la ruta completa con mayor probabilidad."
+                "Los porcentajes se muestran sólo en la ruta azul: % que inicia → % que sigue → % que cierra. Las rutas grises quedan como contexto."
             )
         else:
             st.caption(
-                "Cada porcentaje es la probabilidad bayesiana de pasar al siguiente paso dentro de la ruta seleccionada."
+                "Los porcentajes se muestran sólo en la ruta azul seleccionada; las demás rutas quedan como contexto."
             )
 
         if selected_second != "—" and selected_third != "—":
@@ -3184,13 +3187,12 @@ elif page == "Cómo se decide":
 
         with st.expander("Cómo se calculan estos porcentajes"):
             st.markdown(
-                "Son **probabilidades bayesianas de transición**. En cada paso se combina lo observado en esa rama "
-                "con la distribución general del producto/categoría mediante un prior Dirichlet. "
-                "Esto evita que una rama pequeña produzca porcentajes demasiado extremos o inestables."
+                "Cada cifra es una **probabilidad bayesiana de avanzar al siguiente paso**. "
+                "El cálculo combina las respuestas observadas con una referencia de la categoría para estabilizar ramas pequeñas."
             )
             st.markdown(
-                "**Cómo leerlo:** si una conexión muestra 32%, significa que el modelo estima una probabilidad de 32% "
-                "de avanzar por ese camino entre quienes llegaron al paso anterior."
+                "Ejemplo: **24% sigue** significa que, entre quienes llegaron al criterio anterior, "
+                "el modelo estima 24% de probabilidad de continuar por esa opción."
             )
 
         with st.expander("Ver porcentajes de esta ruta"):
