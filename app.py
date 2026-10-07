@@ -2089,38 +2089,6 @@ def decision_tree_figure(
             showlegend=False,
         ))
 
-        # El porcentaje pertenece a la transición, no al nodo.
-        # Desde Compra representa % del total; en los niveles posteriores,
-        # representa % de quienes llegaron al nodo anterior.
-        t_mid = 0.50
-        x_mid = (
-            ((1-t_mid)**3)*x0
-            + 3*((1-t_mid)**2)*t_mid*c1x
-            + 3*(1-t_mid)*(t_mid**2)*c2x
-            + (t_mid**3)*x1
-        )
-        y_mid = (
-            ((1-t_mid)**3)*y0
-            + 3*((1-t_mid)**2)*t_mid*c1y
-            + 3*(1-t_mid)*(t_mid**2)*c2y
-            + (t_mid**3)*y1
-        )
-        fig.add_annotation(
-            x=x_mid,
-            y=y_mid,
-            text=f"<b>{pct:.1f}%</b>",
-            showarrow=False,
-            xanchor="center",
-            yanchor="middle",
-            bgcolor="#FFFFFF",
-            bordercolor=main_blue if highlight else "#D8E2EB",
-            borderwidth=1,
-            borderpad=3,
-            font=dict(
-                size=11.5,
-                color=main_blue if highlight else "#60778D",
-            ),
-        )
 
     def add_card(x, y, label, pct, cond_pct, base, mode, stage, *, highlight=False, root=False):
         if root:
@@ -3101,15 +3069,15 @@ elif page == "Cómo se decide":
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Primero</div>
-                <div class="tree-column-sub">Primera decisión</div>
+                <div class="tree-column-sub">Qué considera primero</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Después</div>
-                <div class="tree-column-sub">Segunda decisión</div>
+                <div class="tree-column-sub">Qué toma en cuenta después</div>
               </div>
               <div class="tree-column-head">
                 <div class="tree-column-title">Cierre</div>
-                <div class="tree-column-sub">Decisión final</div>
+                <div class="tree-column-sub">Qué termina definiendo</div>
               </div>
             </div>
             """,
@@ -3143,34 +3111,47 @@ elif page == "Cómo se decide":
 
         if route_legend.startswith("Ruta principal"):
             st.caption(
-                f"La ruta azul es el camino completo con mayor alcance ({main_route_pct:.1f}% del total). "
-                "Los porcentajes están sobre las conexiones: desde Compra indican % del total; después indican % de quienes llegaron al paso anterior."
+                "La línea azul muestra la ruta completa más frecuente. Los porcentajes por etapa quedan disponibles en el detalle de la ruta."
             )
         else:
             st.caption(
-                "La ruta azul corresponde a la selección actual. Los porcentajes sobre las conexiones muestran qué proporción avanza al siguiente paso."
+                "La línea azul corresponde a la ruta seleccionada. Los porcentajes por etapa quedan disponibles en el detalle de la ruta."
             )
 
         if selected_second != "—" and selected_third != "—":
-            dynamic_text = (
-                f"<b>Cómo leer la ruta azul:</b> {selected_first_pct:.1f}% del total empieza por "
-                f"<b>{html.escape(selected_first)}</b>. De ese grupo, {selected_second_pct:.1f}% sigue por "
-                f"<b>{html.escape(selected_second)}</b>; y de quienes llegan ahí, {selected_third_pct:.1f}% cierra con "
-                f"<b>{html.escape(selected_third)}</b>."
+            route_text = (
+                f"<b>{html.escape(selected_first)}</b> → "
+                f"<b>{html.escape(selected_second)}</b> → "
+                f"<b>{html.escape(selected_third)}</b>"
             )
         elif selected_second != "—":
-            dynamic_text = (
-                f"<b>Cómo leer la ruta azul:</b> {selected_first_pct:.1f}% del total empieza por "
-                f"<b>{html.escape(selected_first)}</b>. De ese grupo, {selected_second_pct:.1f}% sigue por "
-                f"<b>{html.escape(selected_second)}</b>."
+            route_text = (
+                f"<b>{html.escape(selected_first)}</b> → "
+                f"<b>{html.escape(selected_second)}</b>"
             )
         else:
-            dynamic_text = start_phrase.rstrip(", ") + "."
+            route_text = f"<b>{html.escape(selected_first)}</b>"
 
-        st.markdown(
-            f'<div class="decision-dynamic-insight">{dynamic_text}</div>',
-            unsafe_allow_html=True,
+        route_summary = (
+            f'<div class="decision-dynamic-insight"><b>Ruta mostrada:</b> {route_text}'
         )
+        if route_legend.startswith("Ruta principal"):
+            route_summary += f' <span style="color:#6B7E93">· representa {main_route_pct:.1f}% del total</span>'
+        route_summary += '</div>'
+        st.markdown(route_summary, unsafe_allow_html=True)
+
+        with st.expander("Ver porcentajes de esta ruta"):
+            st.markdown(
+                f"**Primero:** {selected_first_pct:.1f}% del total comienza por **{selected_first}**."
+            )
+            if selected_second != "—":
+                st.markdown(
+                    f"**Después:** {selected_second_pct:.1f}% de quienes empezaron por **{selected_first}** sigue por **{selected_second}**."
+                )
+            if selected_third != "—":
+                st.markdown(
+                    f"**Cierre:** {selected_third_pct:.1f}% de quienes llegaron a **{selected_second}** termina definiendo con **{selected_third}**."
+                )
 
 # LOCKED SECTION — DRIVERS CLAVE
 # Versión final aprobada por el usuario el 2026-10-01. No modificar sin solicitud explícita.
