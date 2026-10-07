@@ -3485,7 +3485,7 @@ elif page == "Cómo ordenar el anaquel":
         with h1:
             st.markdown('<div class="shelf-panel-title">Orden recomendado</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario.</div>',
+                '<div class="shelf-panel-sub">Tres niveles: guía principal, segundo filtro y apoyo complementario. <b>Peso estimado</b> = preferencia calculada con Plackett–Luce.</div>',
                 unsafe_allow_html=True,
             )
         with h2:
@@ -3613,7 +3613,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Ayuda a ubicar primero el producto.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>preferencia PL</span></div>'
+                f'<div class="shelf-route-metric">{primary_pref:.1f}% <span>peso estimado</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{primary_chips}</div>'
               '</div>'
@@ -3627,7 +3627,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Afina la elección dentro del primer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{secondary_prob:.1f}% <span>de quienes empiezan por el nivel 1</span></div>'
+                f'<div class="shelf-route-metric">{secondary_prob:.1f}% <span>lo elige después</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{secondary_chips}</div>'
               '</div>'
@@ -3641,7 +3641,7 @@ elif page == "Cómo ordenar el anaquel":
                     '<div class="shelf-route-explain">Refuerza la navegación como tercer nivel.</div>'
                   '</div>'
                 '</div>'
-                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>preferencia PL · modelado</span></div>'
+                f'<div class="shelf-route-metric">{tertiary_pref:.1f}% <span>peso estimado</span></div>'
                 '<div class="shelf-route-examples-label">Ejemplos</div>'
                 f'<div class="shelf-route-chips">{tertiary_chips}</div>'
               '</div>'
